@@ -18,10 +18,10 @@ public class Database extends SQLiteOpenHelper {
   public void onCreate(SQLiteDatabase db) {
     db.execSQL("create table " + TABLE_NAME + "(" +
         _ID + " INTEGER PRIMARY KEY," +
-        LATITUDE + " TEXT," +
-        LONGITUDE + " TEXT," +
-        SPEED + " TEXT," +
-        CREATED_AT + " TEXT)"
+        LATITUDE + " REAL," +
+        LONGITUDE + " REAL," +
+        SPEED + " REAL," +
+        CREATED_AT + " INTEGER)"
     );
   }
 
