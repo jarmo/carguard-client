@@ -7,12 +7,12 @@ import android.content.Intent;
 import static android.content.Intent.ACTION_BOOT_COMPLETED;
 
 public class BootReceiver extends BroadcastReceiver {
-    AlarmReceiver alarm = new AlarmReceiver();
+  AlarmReceiver alarm = new AlarmReceiver();
 
-    @Override
-    public void onReceive(Context context, Intent intent) {
-        if (ACTION_BOOT_COMPLETED.equals(intent.getAction())) {
-            alarm.enableTask(context);
-        }
+  @Override
+  public void onReceive(Context context, Intent intent) {
+    if (ACTION_BOOT_COMPLETED.equals(intent.getAction())) {
+      alarm.enableTask(context);
     }
+  }
 }

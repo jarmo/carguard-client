@@ -7,26 +7,26 @@ import android.view.View;
 import android.widget.EditText;
 
 public class MainActivity extends Activity {
-    AlarmReceiver alarm = new AlarmReceiver();
+  AlarmReceiver alarm = new AlarmReceiver();
 
-    /**
-     * Called when the activity is first created.
-     */
-    @Override
-    public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.main);
-    }
+  /**
+   * Called when the activity is first created.
+   */
+  @Override
+  public void onCreate(Bundle savedInstanceState) {
+    super.onCreate(savedInstanceState);
+    setContentView(R.layout.main);
+  }
 
-    public void saveServerUrl(View view) {
-        Editable editText = ((EditText) findViewById(R.id.editText)).getText();
-        if (editText != null) {
-            String text2 = editText.toString();
-            alarm.enableTask(this);
-        }
+  public void saveServerUrl(View view) {
+    Editable editText = ((EditText) findViewById(R.id.editText)).getText();
+    if (editText != null) {
+      String text2 = editText.toString();
+      alarm.enableTask(this);
     }
+  }
 
-    public void cancelAlarm(View view) {
-        alarm.disableTask(this);
-    }
+  public void cancelAlarm(View view) {
+    alarm.disableTask(this);
+  }
 }
