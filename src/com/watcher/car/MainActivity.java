@@ -9,9 +9,6 @@ import android.widget.EditText;
 public class MainActivity extends Activity {
   AlarmReceiver alarm = new AlarmReceiver();
 
-  /**
-   * Called when the activity is first created.
-   */
   @Override
   public void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
