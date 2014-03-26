@@ -30,15 +30,7 @@ public class WatchingService extends IntentService {
   public static final int BLUETOOTH_CONNECTION_TIMEOUT_MILLIS = 15 * 60 * 1000;
   private static Date latestBluetoothConnectionTime = new Date(new Date().getTime() - BLUETOOTH_CONNECTION_TIMEOUT_MILLIS);
 
-  private BroadcastReceiver bluetoothStatusHandler = new BroadcastReceiver() {
-    @Override
-    public void onReceive(Context context, Intent intent) {
-      if (ACTION_ACL_CONNECTED.equals(intent.getAction())) {
-        Log.v(WatchingService.class.getSimpleName(), "Bluetooth connected");
-        latestBluetoothConnectionTime = new Date();
-      }
-    }
-  };
+  private BroadcastReceiver bluetoothStatusHandler;
 
   public WatchingService() {
     super(WatchingService.class.getSimpleName());
@@ -47,8 +39,11 @@ public class WatchingService extends IntentService {
   @Override
   public void onCreate() {
     super.onCreate();
+    initialize();
+  }
 
-    this.database = new Database(this).getWritableDatabase();
+  protected void initialize() {
+    database = new Database(this).getWritableDatabase();
 
     initializeLocationListener();
 
@@ -59,7 +54,7 @@ public class WatchingService extends IntentService {
 
   @Override
   public void onDestroy() {
-    this.unregisterReceiver(bluetoothStatusHandler);
+    unregisterReceiver(bluetoothStatusHandler);
     super.onDestroy();
   }
 
@@ -102,7 +97,7 @@ public class WatchingService extends IntentService {
     values.put(SPEED, location.getSpeed());
     values.put(CREATED_AT, location.getTime());
 
-    this.database.insert(TABLE_NAME, "null", values);
+    database.insert(TABLE_NAME, "null", values);
   }
 
   private void sendPreviousLocationsToServer() {
@@ -116,7 +111,7 @@ public class WatchingService extends IntentService {
 
     String sortOrder = CREATED_AT + " DESC";
 
-    Cursor results = this.database.query(TABLE_NAME, projection, null, null, null, null, sortOrder);
+    Cursor results = database.query(TABLE_NAME, projection, null, null, null, null, sortOrder);
     while (results.moveToNext()) {
       Location location = new Location(GPS_PROVIDER);
       location.setLatitude(results.getDouble(results.getColumnIndex(LATITUDE)));
@@ -126,15 +121,25 @@ public class WatchingService extends IntentService {
 
       try {
         sendLocationToServer(location);
-        this.database.delete(TABLE_NAME, _ID + "=?", new String[]{results.getString(results.getColumnIndex(_ID))});
+        database.delete(TABLE_NAME, _ID + "=?", new String[]{results.getString(results.getColumnIndex(_ID))});
       } catch (Exception e) {
         Log.e(WatchingService.class.getSimpleName(), "Failed to send previous location", e);
       }
     }
   }
 
-  private void initializeBluetoothListener() {
-    this.registerReceiver(bluetoothStatusHandler, new IntentFilter(ACTION_ACL_CONNECTED));
+  protected void initializeBluetoothListener() {
+    bluetoothStatusHandler = new BroadcastReceiver() {
+      @Override
+      public void onReceive(Context context, Intent intent) {
+        if (ACTION_ACL_CONNECTED.equals(intent.getAction())) {
+          Log.v(WatchingService.class.getSimpleName(), "Bluetooth connected");
+          latestBluetoothConnectionTime = new Date();
+        }
+      }
+    };
+
+    registerReceiver(bluetoothStatusHandler, new IntentFilter(ACTION_ACL_CONNECTED));
 
     //noinspection ConstantConditions
     for (BluetoothDevice bluetoothDevice : BluetoothAdapter.getDefaultAdapter().getBondedDevices()) {
@@ -142,7 +147,7 @@ public class WatchingService extends IntentService {
     }
   }
 
-  private void initializeLocationListener() {
+  protected void initializeLocationListener() {
     locationManager = ((LocationManager) getSystemService(LOCATION_SERVICE));
     locationManager.requestLocationUpdates(
       GPS_PROVIDER, LOCATION_UPDATES_INTERVAL_MILLIS, LOCATION_UPDATES_MINIMUM_DISTANCE_METRES,
