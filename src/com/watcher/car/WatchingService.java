@@ -7,7 +7,9 @@ import android.content.*;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.location.Location;
+import android.location.LocationListener;
 import android.location.LocationManager;
+import android.os.Bundle;
 import android.util.Log;
 import org.json.JSONObject;
 
@@ -45,15 +47,8 @@ public class WatchingService extends IntentService {
 
     this.database = new Database(this).getWritableDatabase();
 
-    locationManager = ((LocationManager) getSystemService(LOCATION_SERVICE));
-    locationManager.requestLocationUpdates(GPS_PROVIDER, 10000, 10, new LocationWatcher());
-
-    this.registerReceiver(bluetoothStatusHandler, new IntentFilter(ACTION_ACL_CONNECTED));
-
-    //noinspection ConstantConditions
-    for (BluetoothDevice bluetoothDevice : BluetoothAdapter.getDefaultAdapter().getBondedDevices()) {
-      bluetoothDevice.fetchUuidsWithSdp();
-    }
+    initializeLocationListener();
+    initializeBluetoothListener();
   }
 
   @Override
@@ -75,7 +70,7 @@ public class WatchingService extends IntentService {
 
     sendPreviousLocationsToServer();
 
-    AlarmReceiver.completeWakefulIntent(intent);
+    TaskRunner.completeWakefulIntent(intent);
   }
 
   private void sendLocationToServer(final Location location) {
@@ -130,5 +125,24 @@ public class WatchingService extends IntentService {
         Log.e(WatchingService.class.getSimpleName(), "Failed to send previous location", e);
       }
     }
+  }
+
+  private void initializeBluetoothListener() {
+    this.registerReceiver(bluetoothStatusHandler, new IntentFilter(ACTION_ACL_CONNECTED));
+
+    //noinspection ConstantConditions
+    for (BluetoothDevice bluetoothDevice : BluetoothAdapter.getDefaultAdapter().getBondedDevices()) {
+      bluetoothDevice.fetchUuidsWithSdp();
+    }
+  }
+
+  private void initializeLocationListener() {
+    locationManager = ((LocationManager) getSystemService(LOCATION_SERVICE));
+    locationManager.requestLocationUpdates(GPS_PROVIDER, 10000, 10, new LocationListener() {
+      @Override public void onLocationChanged(Location location) {}
+      @Override public void onStatusChanged(String s, int i, Bundle bundle) {}
+      @Override public void onProviderEnabled(String s) {}
+      @Override public void onProviderDisabled(String s) {}
+    });
   }
 }

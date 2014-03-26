@@ -19,10 +19,9 @@
             </intent-filter>
         </activity>
 
-        <receiver android:name="com.watcher.car.AlarmReceiver"/>
+        <receiver android:name=".TaskRunner"/>
 
-        <receiver android:name="com.watcher.car.BootReceiver"
-                  android:enabled="false">
+        <receiver android:name=".BootHandler">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED"/>
             </intent-filter>

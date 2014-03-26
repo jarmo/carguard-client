@@ -7,15 +7,7 @@ import java.net.URL;
 
 public class HttpClient {
 
-  static {
-    //SSL.init();
-  }
-
-  protected HttpURLConnection openConnection(String url) throws IOException {
-    return (HttpURLConnection) (new URL(url).openConnection());
-  }
-
-  protected void post(String data) {
+  public void post(String data) {
     try {
       HttpURLConnection conn = openConnection("http://leetor.no-ip.org:8010/");
       conn.setDoOutput(true);
@@ -30,5 +22,9 @@ public class HttpClient {
     } catch (Exception e) {
       throw new RuntimeException(e);
     }
+  }
+
+  private HttpURLConnection openConnection(String url) throws IOException {
+    return (HttpURLConnection) (new URL(url).openConnection());
   }
 }
