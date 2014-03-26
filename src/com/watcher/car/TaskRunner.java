@@ -14,6 +14,8 @@ import static android.content.pm.PackageManager.DONT_KILL_APP;
 
 public class TaskRunner extends WakefulBroadcastReceiver {
 
+  public static final int TASK_INTERVAL_MILLIS = 5 * 60 * 1000;
+
   @Override
   public void onReceive(Context context, Intent intent) {
     Intent service = new Intent(context, WatchingService.class);
@@ -24,7 +26,7 @@ public class TaskRunner extends WakefulBroadcastReceiver {
     AlarmManager scheduler = (AlarmManager) context.getSystemService(ALARM_SERVICE);
 
     scheduler.setInexactRepeating(
-      ELAPSED_REALTIME_WAKEUP, 1000, 1000 * 60,
+      ELAPSED_REALTIME_WAKEUP, 0, TASK_INTERVAL_MILLIS,
       PendingIntent.getBroadcast(context, 0, new Intent(context, TaskRunner.class), 0)
     );
 

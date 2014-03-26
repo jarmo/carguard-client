@@ -23,16 +23,18 @@ import static com.watcher.car.Database.Item.*;
 
 public class WatchingService extends IntentService {
 
+  public static final int LOCATION_UPDATES_INTERVAL_MILLIS = 5 * 60 * 1000;
   private SQLiteDatabase database;
   private LocationManager locationManager;
-  private static Date latestBluetoothConnection = new Date(new Date().getTime() - 5 * 60 * 1000);
+  public static final int BLUETOOTH_CONNECTION_TIMEOUT_MILLIS = 15 * 60 * 1000;
+  private static Date latestBluetoothConnectionTime = new Date(new Date().getTime() - BLUETOOTH_CONNECTION_TIMEOUT_MILLIS);
 
   private BroadcastReceiver bluetoothStatusHandler = new BroadcastReceiver() {
     @Override
     public void onReceive(Context context, Intent intent) {
       if (ACTION_ACL_CONNECTED.equals(intent.getAction())) {
-        Log.e(WatchingService.class.getSimpleName(), "Connected");
-        latestBluetoothConnection = new Date();
+        Log.v(WatchingService.class.getSimpleName(), "Bluetooth connected");
+        latestBluetoothConnectionTime = new Date();
       }
     }
   };
@@ -48,7 +50,10 @@ public class WatchingService extends IntentService {
     this.database = new Database(this).getWritableDatabase();
 
     initializeLocationListener();
-    initializeBluetoothListener();
+
+    if (latestBluetoothConnectionTime.getTime() <= new Date().getTime() - BLUETOOTH_CONNECTION_TIMEOUT_MILLIS + 60 * 1000) {
+      initializeBluetoothListener();
+    }
   }
 
   @Override
@@ -60,7 +65,7 @@ public class WatchingService extends IntentService {
   @Override
   protected void onHandleIntent(Intent intent) {
     Location location = locationManager.getLastKnownLocation(GPS_PROVIDER);
-    if (location != null && latestBluetoothConnection.getTime() <= new Date().getTime() - 5 * 60 * 1000) {
+    if (location != null && latestBluetoothConnectionTime.getTime() <= new Date().getTime() - BLUETOOTH_CONNECTION_TIMEOUT_MILLIS) {
       try {
         sendLocationToServer(location);
       } catch (Exception e) {
@@ -138,7 +143,7 @@ public class WatchingService extends IntentService {
 
   private void initializeLocationListener() {
     locationManager = ((LocationManager) getSystemService(LOCATION_SERVICE));
-    locationManager.requestLocationUpdates(GPS_PROVIDER, 10000, 10, new LocationListener() {
+    locationManager.requestLocationUpdates(GPS_PROVIDER, LOCATION_UPDATES_INTERVAL_MILLIS, 10, new LocationListener() {
       @Override public void onLocationChanged(Location location) {}
       @Override public void onStatusChanged(String s, int i, Bundle bundle) {}
       @Override public void onProviderEnabled(String s) {}
