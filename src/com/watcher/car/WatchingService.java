@@ -24,6 +24,7 @@ import static com.watcher.car.Database.Item.*;
 public class WatchingService extends IntentService {
 
   public static final int LOCATION_UPDATES_INTERVAL_MILLIS = 5 * 60 * 1000;
+  public static final int LOCATION_UPDATES_MINIMUM_DISTANCE_METRES = 10;
   private SQLiteDatabase database;
   private LocationManager locationManager;
   public static final int BLUETOOTH_CONNECTION_TIMEOUT_MILLIS = 15 * 60 * 1000;
@@ -143,11 +144,13 @@ public class WatchingService extends IntentService {
 
   private void initializeLocationListener() {
     locationManager = ((LocationManager) getSystemService(LOCATION_SERVICE));
-    locationManager.requestLocationUpdates(GPS_PROVIDER, LOCATION_UPDATES_INTERVAL_MILLIS, 10, new LocationListener() {
-      @Override public void onLocationChanged(Location location) {}
-      @Override public void onStatusChanged(String s, int i, Bundle bundle) {}
-      @Override public void onProviderEnabled(String s) {}
-      @Override public void onProviderDisabled(String s) {}
+    locationManager.requestLocationUpdates(
+      GPS_PROVIDER, LOCATION_UPDATES_INTERVAL_MILLIS, LOCATION_UPDATES_MINIMUM_DISTANCE_METRES,
+      new LocationListener() {
+        @Override public void onLocationChanged(Location location) {}
+        @Override public void onStatusChanged(String s, int i, Bundle bundle) {}
+        @Override public void onProviderEnabled(String s) {}
+        @Override public void onProviderDisabled(String s) {}
     });
   }
 }
