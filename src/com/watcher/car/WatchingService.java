@@ -33,16 +33,18 @@ public class WatchingService extends IntentService {
     this.database = new Database(this).getWritableDatabase();
 
     locationManager = ((LocationManager) getSystemService(LOCATION_SERVICE));
-    locationManager.requestLocationUpdates(GPS_PROVIDER, 5000, 10, new LocationWatcher());
+    locationManager.requestLocationUpdates(GPS_PROVIDER, 10000, 10, new LocationWatcher());
   }
 
   @Override
   protected void onHandleIntent(Intent intent) {
     Location location = locationManager.getLastKnownLocation(GPS_PROVIDER);
-    try {
-      sendLocationToServer(location);
-    } catch (Exception e) {
-      storeLocationLocally(location);
+    if (location != null) {
+      try {
+        sendLocationToServer(location);
+      } catch (Exception e) {
+        storeLocationLocally(location);
+      }
     }
 
     sendPreviousLocationsToServer();
