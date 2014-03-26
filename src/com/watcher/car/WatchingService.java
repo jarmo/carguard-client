@@ -1,8 +1,9 @@
 package com.watcher.car;
 
 import android.app.IntentService;
-import android.content.ContentValues;
-import android.content.Intent;
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
+import android.content.*;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.location.Location;
@@ -10,9 +11,11 @@ import android.location.LocationManager;
 import android.util.Log;
 import org.json.JSONObject;
 
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
+import static android.bluetooth.BluetoothDevice.ACTION_ACL_CONNECTED;
 import static android.location.LocationManager.GPS_PROVIDER;
 import static com.watcher.car.Database.Item.*;
 
@@ -20,10 +23,20 @@ public class WatchingService extends IntentService {
 
   private SQLiteDatabase database;
   private LocationManager locationManager;
+  private static Date latestBluetoothConnection = new Date(new Date().getTime() - 5 * 60 * 1000);
+
+  private BroadcastReceiver bluetoothStatusHandler = new BroadcastReceiver() {
+    @Override
+    public void onReceive(Context context, Intent intent) {
+      if (ACTION_ACL_CONNECTED.equals(intent.getAction())) {
+        Log.e(WatchingService.class.getSimpleName(), "Connected");
+        latestBluetoothConnection = new Date();
+      }
+    }
+  };
 
   public WatchingService() {
     super(WatchingService.class.getSimpleName());
-
   }
 
   @Override
@@ -34,12 +47,25 @@ public class WatchingService extends IntentService {
 
     locationManager = ((LocationManager) getSystemService(LOCATION_SERVICE));
     locationManager.requestLocationUpdates(GPS_PROVIDER, 10000, 10, new LocationWatcher());
+
+    this.registerReceiver(bluetoothStatusHandler, new IntentFilter(ACTION_ACL_CONNECTED));
+
+    //noinspection ConstantConditions
+    for (BluetoothDevice bluetoothDevice : BluetoothAdapter.getDefaultAdapter().getBondedDevices()) {
+      bluetoothDevice.fetchUuidsWithSdp();
+    }
+  }
+
+  @Override
+  public void onDestroy() {
+    this.unregisterReceiver(bluetoothStatusHandler);
+    super.onDestroy();
   }
 
   @Override
   protected void onHandleIntent(Intent intent) {
     Location location = locationManager.getLastKnownLocation(GPS_PROVIDER);
-    if (location != null) {
+    if (location != null && latestBluetoothConnection.getTime() <= new Date().getTime() - 5 * 60 * 1000) {
       try {
         sendLocationToServer(location);
       } catch (Exception e) {
