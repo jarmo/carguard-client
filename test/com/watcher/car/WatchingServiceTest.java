@@ -1,5 +1,6 @@
 package com.watcher.car;
 
+import android.location.Location;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -7,6 +8,7 @@ import org.robolectric.RobolectricTestRunner;
 
 import java.util.Date;
 
+import static android.location.LocationManager.GPS_PROVIDER;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.*;
@@ -66,6 +68,50 @@ public class WatchingServiceTest {
 
     WatchingService service = getService();
     assertFalse(service.isBluetoothConnectionTimedOut());
+  }
+
+  @Test
+  public void handleLocationEventIgnoresWhenNoLocation() {
+    WatchingService service = getService();
+    doReturn(true).when(service).isBluetoothConnectionTimedOut();
+    service.handleLocationEvent(null);
+
+    verify(service, never()).sendLocationToServer(any(Location.class));
+  }
+
+  @Test
+  public void handleLocationEventDoesNotSendLocationToServerWhenBluetoothConnectionHasNotTimedOut() {
+    WatchingService service = getService();
+    doReturn(false).when(service).isBluetoothConnectionTimedOut();
+    service.handleLocationEvent(new Location(GPS_PROVIDER));
+
+    verify(service, never()).sendLocationToServer(any(Location.class));
+    verify(service, never()).storeLocationLocally(any(Location.class));
+  }
+
+  @Test
+  public void handleLocationEventSendsLocationToServerWhenBluetoothConnectionTimedOut() {
+    WatchingService service = getService();
+    doReturn(true).when(service).isBluetoothConnectionTimedOut();
+    doNothing().when(service).sendLocationToServer(any(Location.class));
+    Location location = new Location(GPS_PROVIDER);
+    service.handleLocationEvent(location);
+
+    verify(service).sendLocationToServer(location);
+    verify(service, never()).storeLocationLocally(location);
+  }
+
+  @Test
+  public void handleLocationEventStoresLocationLocallyFailedToSendToServer() {
+    WatchingService service = getService();
+    doReturn(true).when(service).isBluetoothConnectionTimedOut();
+    doThrow(RuntimeException.class).when(service).sendLocationToServer(any(Location.class));
+    doNothing().when(service).storeLocationLocally(any(Location.class));
+    Location location = new Location(GPS_PROVIDER);
+    service.handleLocationEvent(location);
+
+    verify(service).sendLocationToServer(location);
+    verify(service).storeLocationLocally(location);
   }
 
   private WatchingService getService() {
