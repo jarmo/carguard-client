@@ -83,7 +83,7 @@ public class WatchingServiceTest {
   }
 
   @Test
-  public void handleLocationEventIgnoresSameLocation() {
+  public void handleLocationEventIgnoresSameLocationFix() {
     WatchingService service = getService();
     doReturn(true).when(service).isBluetoothConnectionTimedOut();
     doNothing().when(service).sendLocationToServer(any(Location.class));
@@ -101,7 +101,7 @@ public class WatchingServiceTest {
   }
 
   @Test
-  public void handleLocationEventDoesNotIgnoreSameLocation() {
+  public void handleLocationEventDoesNotIgnoreSameLocationWithDifferentFixTime() {
     Location location1 = new Location(GPS_PROVIDER);
     location1.setTime(new Date().getTime());
 

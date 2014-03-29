@@ -71,9 +71,9 @@ public class WatchingService extends IntentService {
   protected void handleLocationEvent(Location location) {
     if (location != null) {
       boolean shouldSendHeartBeatLocation = lastSentTime.getTime() <= new Date().getTime() - HEARTBEAT_TIMEOUT_MILLIS;
-      boolean isDifferentLocation = lastSentLocation == null || lastSentLocation.getTime() != location.getTime();
+      boolean isDifferentLocationFix = lastSentLocation == null || lastSentLocation.getTime() != location.getTime();
 
-      if (shouldSendHeartBeatLocation || isDifferentLocation && isBluetoothConnectionTimedOut()) {
+      if (shouldSendHeartBeatLocation || isDifferentLocationFix && isBluetoothConnectionTimedOut()) {
         try {
           sendLocationToServer(location);
           lastSentLocation = location;
