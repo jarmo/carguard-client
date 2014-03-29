@@ -25,12 +25,12 @@ public class WatchingService extends IntentService {
 
   public static final int LOCATION_UPDATES_INTERVAL_MILLIS = 5 * 60 * 1000;
   public static final int LOCATION_UPDATES_MINIMUM_DISTANCE_METRES = 10;
-  private Database database;
-  private LocationManager locationManager;
   public static final int BLUETOOTH_CONNECTION_TIMEOUT_MILLIS = 15 * 60 * 1000;
   public static Date latestBluetoothConnectionTime;
   public static Location lastSentLocation;
 
+  private Database database;
+  private LocationManager locationManager;
   private BroadcastReceiver bluetoothStatusHandler;
 
   public WatchingService() {
