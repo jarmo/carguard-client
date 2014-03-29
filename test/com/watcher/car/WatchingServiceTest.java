@@ -16,8 +16,9 @@ import static org.mockito.Mockito.*;
 @RunWith(RobolectricTestRunner.class)
 public class WatchingServiceTest {
   @Before
-  public void clearBlueToothTimeout() {
+  public void clearStatics() {
     WatchingService.latestBluetoothConnectionTime = null;
+    WatchingService.lastSentLocation = null;
   }
 
   @Test
@@ -92,6 +93,24 @@ public class WatchingServiceTest {
 
     Location location2 = new Location(GPS_PROVIDER);
     location2.setTime(time);
+    service.handleLocationEvent(location2);
+
+    verify(service).sendLocationToServer(any(Location.class));
+  }
+
+  @Test
+  public void handleLocationEventDoesNotIgnoreSameLocation() {
+    Location location1 = new Location(GPS_PROVIDER);
+    location1.setTime(new Date().getTime());
+
+    WatchingService.lastSentLocation = location1;
+
+    WatchingService service = getService();
+    doReturn(true).when(service).isBluetoothConnectionTimedOut();
+    doNothing().when(service).sendLocationToServer(any(Location.class));
+
+    Location location2 = new Location(GPS_PROVIDER);
+    location2.setTime(new Date().getTime() + 1000);
     service.handleLocationEvent(location2);
 
     verify(service).sendLocationToServer(any(Location.class));

@@ -28,8 +28,8 @@ public class WatchingService extends IntentService {
   private Database database;
   private LocationManager locationManager;
   public static final int BLUETOOTH_CONNECTION_TIMEOUT_MILLIS = 15 * 60 * 1000;
-  public static Date latestBluetoothConnectionTime = new Date(new Date().getTime() - BLUETOOTH_CONNECTION_TIMEOUT_MILLIS);
-  private static Location lastSentLocation;
+  public static Date latestBluetoothConnectionTime;
+  public static Location lastSentLocation;
 
   private BroadcastReceiver bluetoothStatusHandler;
 
