@@ -9,6 +9,7 @@ import org.robolectric.RobolectricTestRunner;
 import java.util.Date;
 
 import static android.location.LocationManager.GPS_PROVIDER;
+import static com.watcher.car.WatchingService.HEARTBEAT_TIMEOUT_MILLIS;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.*;
@@ -16,9 +17,10 @@ import static org.mockito.Mockito.*;
 @RunWith(RobolectricTestRunner.class)
 public class WatchingServiceTest {
   @Before
-  public void clearStatics() {
+  public void clearState() {
     WatchingService.latestBluetoothConnectionTime = null;
     WatchingService.lastSentLocation = null;
+    WatchingService.lastSentTime = new Date();
   }
 
   @Test
@@ -149,6 +151,22 @@ public class WatchingServiceTest {
 
     verify(service).sendLocationToServer(location);
     verify(service).storeLocationLocally(location);
+  }
+
+  @Test
+  public void handleLocationEventSendsLocationToServerWhenHeartbeatTimeoutHasBeenReached() {
+    WatchingService service = getService();
+    doReturn(true).when(service).isBluetoothConnectionTimedOut();
+    doNothing().when(service).sendLocationToServer(any(Location.class));
+
+    Location location = new Location(GPS_PROVIDER);
+    location.setTime(new Date().getTime());
+    WatchingService.lastSentLocation = location;
+    WatchingService.lastSentTime = new Date(new Date().getTime() - HEARTBEAT_TIMEOUT_MILLIS);
+
+    service.handleLocationEvent(location);
+
+    verify(service).sendLocationToServer(location);
   }
 
   private WatchingService getService() {

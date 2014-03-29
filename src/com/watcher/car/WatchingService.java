@@ -26,8 +26,10 @@ public class WatchingService extends IntentService {
   public static final int LOCATION_UPDATES_INTERVAL_MILLIS = 5 * 60 * 1000;
   public static final int LOCATION_UPDATES_MINIMUM_DISTANCE_METRES = 100;
   public static final int BLUETOOTH_CONNECTION_TIMEOUT_MILLIS = 15 * 60 * 1000;
+  public static final int HEARTBEAT_TIMEOUT_MILLIS = 12 * 60 * 60 * 1000;
   public static Date latestBluetoothConnectionTime;
   public static Location lastSentLocation;
+  public static Date lastSentTime = new Date();
 
   private Database database;
   private LocationManager locationManager;
@@ -67,12 +69,18 @@ public class WatchingService extends IntentService {
   }
 
   protected void handleLocationEvent(Location location) {
-    if (location != null && (lastSentLocation == null || lastSentLocation.getTime() != location.getTime()) && isBluetoothConnectionTimedOut()) {
-      try {
-        sendLocationToServer(location);
-        lastSentLocation = location;
-      } catch (Exception e) {
-        storeLocationLocally(location);
+    if (location != null) {
+      boolean shouldSendHeartBeatLocation = lastSentTime.getTime() <= new Date().getTime() - HEARTBEAT_TIMEOUT_MILLIS;
+      boolean isDifferentLocation = lastSentLocation == null || lastSentLocation.getTime() != location.getTime();
+
+      if (shouldSendHeartBeatLocation || isDifferentLocation && isBluetoothConnectionTimedOut()) {
+        try {
+          sendLocationToServer(location);
+          lastSentLocation = location;
+          lastSentTime = new Date();
+        } catch (Exception e) {
+          storeLocationLocally(location);
+        }
       }
     }
   }
