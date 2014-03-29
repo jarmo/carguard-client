@@ -53,8 +53,8 @@ public class WatchingServiceTest {
   }
 
   @Test
-  public void isBluetoothConnectionTimedOutReturnsTrueWhenBluetoothConnectionHasAlmostTimedOut() {
-    WatchingService.latestBluetoothConnectionTime = new Date(new Date().getTime() - WatchingService.BLUETOOTH_CONNECTION_TIMEOUT_MILLIS + 60 * 1000);
+  public void isBluetoothConnectionTimedOutReturnsTrueWhenBluetoothConnectionHasTimedOut() {
+    WatchingService.latestBluetoothConnectionTime = new Date(new Date().getTime() - WatchingService.BLUETOOTH_CONNECTION_TIMEOUT_MILLIS);
 
     WatchingService service = getService();
     assertTrue(service.isBluetoothConnectionTimedOut());
@@ -62,7 +62,7 @@ public class WatchingServiceTest {
 
   @Test
   public void isBluetoothConnectionTimedOutReturnsFalseWhenBluetoothConnectionHasNotTimedOut() {
-    WatchingService.latestBluetoothConnectionTime = new Date(new Date().getTime() - WatchingService.BLUETOOTH_CONNECTION_TIMEOUT_MILLIS + 61 * 1000);
+    WatchingService.latestBluetoothConnectionTime = new Date(new Date().getTime() - WatchingService.BLUETOOTH_CONNECTION_TIMEOUT_MILLIS + 1000);
 
     WatchingService service = getService();
     assertFalse(service.isBluetoothConnectionTimedOut());
