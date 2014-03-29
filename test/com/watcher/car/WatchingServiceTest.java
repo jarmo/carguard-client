@@ -1,13 +1,22 @@
 package com.watcher.car;
 
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.robolectric.RobolectricTestRunner;
 
+import java.util.Date;
+
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.*;
 
 @RunWith(RobolectricTestRunner.class)
 public class WatchingServiceTest {
+  @Before
+  public void clearBlueToothTimeout() {
+    WatchingService.latestBluetoothConnectionTime = null;
+  }
+
   @Test
   public void initializesLocationListener() {
     WatchingService service = getService();
@@ -17,11 +26,37 @@ public class WatchingServiceTest {
   }
 
   @Test
-  public void initializeBluetoothListener() {
+  public void initializeBluetoothListenerWhenConnectionHasTimedOut() {
     WatchingService service = getService();
+    doReturn(true).when(service).isBluetoothConnectionTimedOut();
     service.initialize();
 
     verify(service).initializeBluetoothListener();
+  }
+
+  @Test
+  public void doesNotInitializeBluetoothListenerWhenConnectionHasNotTimedOut() {
+    WatchingService service = getService();
+    doReturn(false).when(service).isBluetoothConnectionTimedOut();
+    service.initialize();
+
+    verify(service, never()).initializeBluetoothListener();
+  }
+
+  @Test
+  public void isBluetoothConnectionTimedOutReturnsTrueWhenBluetoothConnectionHasNotBeenMade() {
+    WatchingService.latestBluetoothConnectionTime = null;
+
+    WatchingService service = getService();
+    assertTrue(service.isBluetoothConnectionTimedOut());
+  }
+
+  @Test
+  public void isBluetoothConnectionTimedOutReturnsTrueWhenBluetoothConnectionHasTimedOut() {
+    WatchingService.latestBluetoothConnectionTime = new Date(new Date().getTime() - WatchingService.BLUETOOTH_CONNECTION_TIMEOUT_MILLIS);
+
+    WatchingService service = getService();
+    assertTrue(service.isBluetoothConnectionTimedOut());
   }
 
   private WatchingService getService() {

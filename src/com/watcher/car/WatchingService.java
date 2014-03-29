@@ -28,7 +28,7 @@ public class WatchingService extends IntentService {
   private SQLiteDatabase database;
   private LocationManager locationManager;
   public static final int BLUETOOTH_CONNECTION_TIMEOUT_MILLIS = 15 * 60 * 1000;
-  private static Date latestBluetoothConnectionTime = new Date(new Date().getTime() - BLUETOOTH_CONNECTION_TIMEOUT_MILLIS);
+  public static Date latestBluetoothConnectionTime = new Date(new Date().getTime() - BLUETOOTH_CONNECTION_TIMEOUT_MILLIS);
 
   private BroadcastReceiver bluetoothStatusHandler;
 
@@ -47,7 +47,7 @@ public class WatchingService extends IntentService {
 
     initializeLocationListener();
 
-    if (latestBluetoothConnectionTime.getTime() <= new Date().getTime() - BLUETOOTH_CONNECTION_TIMEOUT_MILLIS + 60 * 1000) {
+    if (isBluetoothConnectionTimedOut()) {
       initializeBluetoothListener();
     }
   }
@@ -72,6 +72,42 @@ public class WatchingService extends IntentService {
     sendPreviousLocationsToServer();
 
     TaskRunner.completeWakefulIntent(intent);
+  }
+
+  protected boolean isBluetoothConnectionTimedOut() {
+    return latestBluetoothConnectionTime == null ||
+      latestBluetoothConnectionTime.getTime() <= new Date().getTime() - BLUETOOTH_CONNECTION_TIMEOUT_MILLIS;
+  }
+
+  protected void initializeBluetoothListener() {
+    bluetoothStatusHandler = new BroadcastReceiver() {
+      @Override
+      public void onReceive(Context context, Intent intent) {
+        if (ACTION_ACL_CONNECTED.equals(intent.getAction())) {
+          Log.v(WatchingService.class.getSimpleName(), "Bluetooth connected");
+          latestBluetoothConnectionTime = new Date();
+        }
+      }
+    };
+
+    registerReceiver(bluetoothStatusHandler, new IntentFilter(ACTION_ACL_CONNECTED));
+
+    //noinspection ConstantConditions
+    for (BluetoothDevice bluetoothDevice : BluetoothAdapter.getDefaultAdapter().getBondedDevices()) {
+      bluetoothDevice.fetchUuidsWithSdp();
+    }
+  }
+
+  protected void initializeLocationListener() {
+    locationManager = ((LocationManager) getSystemService(LOCATION_SERVICE));
+    locationManager.requestLocationUpdates(
+      GPS_PROVIDER, LOCATION_UPDATES_INTERVAL_MILLIS, LOCATION_UPDATES_MINIMUM_DISTANCE_METRES,
+      new LocationListener() {
+        @Override public void onLocationChanged(Location location) {}
+        @Override public void onStatusChanged(String s, int i, Bundle bundle) {}
+        @Override public void onProviderEnabled(String s) {}
+        @Override public void onProviderDisabled(String s) {}
+      });
   }
 
   private void sendLocationToServer(final Location location) {
@@ -126,36 +162,5 @@ public class WatchingService extends IntentService {
         Log.e(WatchingService.class.getSimpleName(), "Failed to send previous location", e);
       }
     }
-  }
-
-  protected void initializeBluetoothListener() {
-    bluetoothStatusHandler = new BroadcastReceiver() {
-      @Override
-      public void onReceive(Context context, Intent intent) {
-        if (ACTION_ACL_CONNECTED.equals(intent.getAction())) {
-          Log.v(WatchingService.class.getSimpleName(), "Bluetooth connected");
-          latestBluetoothConnectionTime = new Date();
-        }
-      }
-    };
-
-    registerReceiver(bluetoothStatusHandler, new IntentFilter(ACTION_ACL_CONNECTED));
-
-    //noinspection ConstantConditions
-    for (BluetoothDevice bluetoothDevice : BluetoothAdapter.getDefaultAdapter().getBondedDevices()) {
-      bluetoothDevice.fetchUuidsWithSdp();
-    }
-  }
-
-  protected void initializeLocationListener() {
-    locationManager = ((LocationManager) getSystemService(LOCATION_SERVICE));
-    locationManager.requestLocationUpdates(
-      GPS_PROVIDER, LOCATION_UPDATES_INTERVAL_MILLIS, LOCATION_UPDATES_MINIMUM_DISTANCE_METRES,
-      new LocationListener() {
-        @Override public void onLocationChanged(Location location) {}
-        @Override public void onStatusChanged(String s, int i, Bundle bundle) {}
-        @Override public void onProviderEnabled(String s) {}
-        @Override public void onProviderDisabled(String s) {}
-    });
   }
 }
