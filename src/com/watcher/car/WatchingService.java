@@ -29,6 +29,7 @@ public class WatchingService extends IntentService {
   private LocationManager locationManager;
   public static final int BLUETOOTH_CONNECTION_TIMEOUT_MILLIS = 15 * 60 * 1000;
   public static Date latestBluetoothConnectionTime = new Date(new Date().getTime() - BLUETOOTH_CONNECTION_TIMEOUT_MILLIS);
+  private static Location lastSentLocation;
 
   private BroadcastReceiver bluetoothStatusHandler;
 
@@ -66,9 +67,10 @@ public class WatchingService extends IntentService {
   }
 
   protected void handleLocationEvent(Location location) {
-    if (location != null && isBluetoothConnectionTimedOut()) {
+    if (location != null && (lastSentLocation == null || lastSentLocation.getTime() != location.getTime()) && isBluetoothConnectionTimedOut()) {
       try {
         sendLocationToServer(location);
+        lastSentLocation = location;
       } catch (Exception e) {
         storeLocationLocally(location);
       }

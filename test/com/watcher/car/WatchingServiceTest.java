@@ -80,6 +80,24 @@ public class WatchingServiceTest {
   }
 
   @Test
+  public void handleLocationEventIgnoresSameLocation() {
+    WatchingService service = getService();
+    doReturn(true).when(service).isBluetoothConnectionTimedOut();
+    doNothing().when(service).sendLocationToServer(any(Location.class));
+
+    Location location1 = new Location(GPS_PROVIDER);
+    long time = new Date().getTime();
+    location1.setTime(time);
+    service.handleLocationEvent(location1);
+
+    Location location2 = new Location(GPS_PROVIDER);
+    location2.setTime(time);
+    service.handleLocationEvent(location2);
+
+    verify(service).sendLocationToServer(any(Location.class));
+  }
+
+  @Test
   public void handleLocationEventDoesNotSendLocationToServerWhenBluetoothConnectionHasNotTimedOut() {
     WatchingService service = getService();
     doReturn(false).when(service).isBluetoothConnectionTimedOut();
