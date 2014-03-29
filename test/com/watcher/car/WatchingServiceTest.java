@@ -7,6 +7,7 @@ import org.robolectric.RobolectricTestRunner;
 
 import java.util.Date;
 
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.*;
 
@@ -52,11 +53,19 @@ public class WatchingServiceTest {
   }
 
   @Test
-  public void isBluetoothConnectionTimedOutReturnsTrueWhenBluetoothConnectionHasTimedOut() {
-    WatchingService.latestBluetoothConnectionTime = new Date(new Date().getTime() - WatchingService.BLUETOOTH_CONNECTION_TIMEOUT_MILLIS);
+  public void isBluetoothConnectionTimedOutReturnsTrueWhenBluetoothConnectionHasAlmostTimedOut() {
+    WatchingService.latestBluetoothConnectionTime = new Date(new Date().getTime() - WatchingService.BLUETOOTH_CONNECTION_TIMEOUT_MILLIS + 60 * 1000);
 
     WatchingService service = getService();
     assertTrue(service.isBluetoothConnectionTimedOut());
+  }
+
+  @Test
+  public void isBluetoothConnectionTimedOutReturnsFalseWhenBluetoothConnectionHasNotTimedOut() {
+    WatchingService.latestBluetoothConnectionTime = new Date(new Date().getTime() - WatchingService.BLUETOOTH_CONNECTION_TIMEOUT_MILLIS + 61 * 1000);
+
+    WatchingService service = getService();
+    assertFalse(service.isBluetoothConnectionTimedOut());
   }
 
   private WatchingService getService() {

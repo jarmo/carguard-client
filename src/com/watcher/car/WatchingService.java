@@ -76,7 +76,7 @@ public class WatchingService extends IntentService {
 
   protected boolean isBluetoothConnectionTimedOut() {
     return latestBluetoothConnectionTime == null ||
-      latestBluetoothConnectionTime.getTime() <= new Date().getTime() - BLUETOOTH_CONNECTION_TIMEOUT_MILLIS;
+      latestBluetoothConnectionTime.getTime() <= new Date().getTime() - BLUETOOTH_CONNECTION_TIMEOUT_MILLIS + 60 * 1000;
   }
 
   protected void initializeBluetoothListener() {
