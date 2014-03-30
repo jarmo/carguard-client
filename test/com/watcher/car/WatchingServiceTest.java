@@ -83,36 +83,37 @@ public class WatchingServiceTest {
   }
 
   @Test
-  public void handleLocationEventIgnoresSameLocationFix() {
+  public void handleLocationEventIgnoresNearLocations() {
     WatchingService service = getService();
     doReturn(true).when(service).isBluetoothConnectionTimedOut();
-    doNothing().when(service).sendLocationToServer(any(Location.class));
 
     Location location1 = new Location(GPS_PROVIDER);
-    long time = new Date().getTime();
-    location1.setTime(time);
-    service.handleLocationEvent(location1);
+    location1.setLatitude(59.406270703834515);
+    location1.setLongitude(24.69359735090019);
+    WatchingService.lastSentLocation = location1;
 
     Location location2 = new Location(GPS_PROVIDER);
-    location2.setTime(time);
+    location2.setLatitude(59.406270703834515);
+    location2.setLongitude(24.69359735090019);
     service.handleLocationEvent(location2);
 
-    verify(service).sendLocationToServer(any(Location.class));
+    verify(service, never()).sendLocationToServer(any(Location.class));
   }
 
   @Test
-  public void handleLocationEventDoesNotIgnoreSameLocationWithDifferentFixTime() {
-    Location location1 = new Location(GPS_PROVIDER);
-    location1.setTime(new Date().getTime());
-
-    WatchingService.lastSentLocation = location1;
-
+  public void handleLocationEventDoesNotIgnoreLocationsFurtherAway() {
     WatchingService service = getService();
     doReturn(true).when(service).isBluetoothConnectionTimedOut();
     doNothing().when(service).sendLocationToServer(any(Location.class));
 
+    Location location1 = new Location(GPS_PROVIDER);
+    location1.setLatitude(59.406270703834515);
+    location1.setLongitude(24.69359735090019);
+    WatchingService.lastSentLocation = location1;
+
     Location location2 = new Location(GPS_PROVIDER);
-    location2.setTime(new Date().getTime() + 1000);
+    location2.setLatitude(59.406460703834515);
+    location2.setLongitude(24.69539735090019);
     service.handleLocationEvent(location2);
 
     verify(service).sendLocationToServer(any(Location.class));

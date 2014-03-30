@@ -23,7 +23,7 @@ import static android.location.LocationManager.GPS_PROVIDER;
 
 public class WatchingService extends IntentService {
 
-  public static final int LOCATION_UPDATES_INTERVAL_MILLIS = 5 * 60 * 1000;
+  public static final int LOCATION_UPDATES_INTERVAL_MILLIS = 60 * 1000;
   public static final int LOCATION_UPDATES_MINIMUM_DISTANCE_METRES = 100;
   public static final int BLUETOOTH_CONNECTION_TIMEOUT_MILLIS = 15 * 60 * 1000;
   public static final int HEARTBEAT_TIMEOUT_MILLIS = 12 * 60 * 60 * 1000;
@@ -69,15 +69,17 @@ public class WatchingService extends IntentService {
   }
 
   protected void handleLocationEvent(Location location) {
+    Log.d(WatchingService.class.getSimpleName(), "Handling location event");
     if (location != null) {
       boolean shouldSendHeartBeatLocation = lastSentTime.getTime() <= new Date().getTime() - HEARTBEAT_TIMEOUT_MILLIS;
-      boolean isDifferentLocationFix = lastSentLocation == null || lastSentLocation.getTime() != location.getTime();
+      boolean isDistantLocation = lastSentLocation == null || lastSentLocation.distanceTo(location) >= 100;
 
-      if (shouldSendHeartBeatLocation || isDifferentLocationFix && isBluetoothConnectionTimedOut()) {
+      if (shouldSendHeartBeatLocation || isDistantLocation && isBluetoothConnectionTimedOut()) {
         try {
           sendLocationToServer(location);
           lastSentLocation = location;
           lastSentTime = new Date();
+          Log.d(WatchingService.class.getSimpleName(), "Location event sent to the server");
         } catch (Exception e) {
           storeLocationLocally(location);
         }
@@ -128,6 +130,10 @@ public class WatchingService extends IntentService {
       put("speed", location.getSpeed());
       put("time", location.getTime());
     }};
+
+    if (lastSentLocation != null) {
+      data.put("distance", location.distanceTo(lastSentLocation));
+    }
 
     try {
       new HttpClient().post(new JSONObject(data).toString());
