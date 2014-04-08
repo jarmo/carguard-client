@@ -29,6 +29,7 @@ public class WatchingService extends IntentService {
   public static final int HEARTBEAT_TIMEOUT_MILLIS = 12 * 60 * 60 * 1000;
   public static Date latestBluetoothConnectionTime;
   public static Location lastSentLocation;
+  public static Location lastSavedLocation;
   public static Date lastSentTime = new Date();
 
   private Database database;
@@ -79,9 +80,14 @@ public class WatchingService extends IntentService {
           sendLocationToServer(location);
           lastSentLocation = location;
           lastSentTime = new Date();
-          Log.d(WatchingService.class.getSimpleName(), "Location event sent to the server");
+          Log.d(WatchingService.class.getSimpleName(), "Location sent to the server");
         } catch (Exception e) {
-          storeLocationLocally(location);
+          Log.d(WatchingService.class.getSimpleName(), "Failed to send location to the server", e);
+
+          if (!location.equals(lastSavedLocation)) {
+            storeLocationLocally(location);
+            lastSavedLocation = location;
+          }
         }
       }
     }
@@ -129,6 +135,7 @@ public class WatchingService extends IntentService {
       put("longitude", location.getLongitude());
       put("speed", location.getSpeed());
       put("time", location.getTime());
+      put("sentTime", new Date().getTime());
     }};
 
     if (lastSentLocation != null) {

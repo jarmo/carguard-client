@@ -155,6 +155,20 @@ public class WatchingServiceTest {
   }
 
   @Test
+  public void handleLocationEventDoesNotStoreLastSavedLocationLocallyFailedToSendToServer() {
+    WatchingService service = getService();
+    doReturn(true).when(service).isBluetoothConnectionTimedOut();
+    doThrow(RuntimeException.class).when(service).sendLocationToServer(any(Location.class));
+    doNothing().when(service).storeLocationLocally(any(Location.class));
+    Location location = new Location(GPS_PROVIDER);
+    service.handleLocationEvent(location);
+    service.handleLocationEvent(location);
+
+    verify(service, times(2)).sendLocationToServer(location);
+    verify(service).storeLocationLocally(location);
+  }
+
+  @Test
   public void handleLocationEventSendsLocationToServerWhenHeartbeatTimeoutHasBeenReached() {
     WatchingService service = getService();
     doReturn(true).when(service).isBluetoothConnectionTimedOut();
