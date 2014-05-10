@@ -28,7 +28,7 @@ public class WatchingService extends IntentService {
   public static final int BLUETOOTH_CONNECTION_TIMEOUT_MILLIS = 15 * 60 * 1000;
   public static final int HEARTBEAT_TIMEOUT_MILLIS = 12 * 60 * 60 * 1000;
   public static Date latestBluetoothConnectionTime;
-  public static Location lastSentLocation;
+  public static Location lastKnownLocation;
   public static Location lastSavedLocation;
   public static Date lastSentTime = new Date();
 
@@ -73,23 +73,24 @@ public class WatchingService extends IntentService {
     Log.d(WatchingService.class.getSimpleName(), "Handling location event");
     if (location != null) {
       boolean shouldSendHeartBeatLocation = lastSentTime.getTime() <= new Date().getTime() - HEARTBEAT_TIMEOUT_MILLIS;
-      boolean isDistantLocation = lastSentLocation == null || lastSentLocation.distanceTo(location) >= 100;
+      boolean isDistantLocation = lastKnownLocation == null || lastKnownLocation.distanceTo(location) >= 100;
 
       if (shouldSendHeartBeatLocation || isDistantLocation && isBluetoothConnectionTimedOut()) {
         try {
           sendLocationToServer(location);
-          lastSentLocation = location;
           lastSentTime = new Date();
           Log.d(WatchingService.class.getSimpleName(), "Location sent to the server");
         } catch (Exception e) {
           Log.d(WatchingService.class.getSimpleName(), "Failed to send location to the server", e);
 
-          if (!location.equals(lastSavedLocation)) {
+          if (!location.equals(lastSavedLocation) && !shouldSendHeartBeatLocation) {
             storeLocationLocally(location);
             lastSavedLocation = location;
           }
         }
       }
+
+      lastKnownLocation = location;
     }
   }
 
@@ -138,8 +139,8 @@ public class WatchingService extends IntentService {
       put("sentTime", new Date().getTime());
     }};
 
-    if (lastSentLocation != null) {
-      data.put("distance", location.distanceTo(lastSentLocation));
+    if (lastKnownLocation != null) {
+      data.put("distance", location.distanceTo(lastKnownLocation));
     }
 
     try {
