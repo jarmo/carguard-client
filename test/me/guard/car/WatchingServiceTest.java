@@ -1,4 +1,4 @@
-package com.watcher.car;
+package me.guard.car;
 
 import android.location.Location;
 import org.junit.Before;
@@ -9,7 +9,7 @@ import org.robolectric.RobolectricTestRunner;
 import java.util.Date;
 
 import static android.location.LocationManager.GPS_PROVIDER;
-import static com.watcher.car.WatchingService.*;
+import static me.guard.car.WatchingService.*;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.*;

@@ -1,4 +1,4 @@
-package com.watcher.car;
+package me.guard.car;
 
 import android.util.Base64;
 
@@ -14,7 +14,7 @@ public class HttpClient {
   public void post(String data) {
     try {
       HttpURLConnection conn = openConnection("http://leetor.no-ip.org:8010/");
-      conn.setRequestProperty("Authorization", "Basic " + Base64.encodeToString("car:watcher".getBytes(), DEFAULT));
+      conn.setRequestProperty("Authorization", "Basic " + Base64.encodeToString("car:guard".getBytes(), DEFAULT));
       conn.setDoOutput(true);
       OutputStreamWriter wr = new OutputStreamWriter(conn.getOutputStream());
       wr.write(data);

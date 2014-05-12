@@ -1,4 +1,4 @@
-package com.watcher.car;
+package me.guard.car;
 
 import android.app.AlarmManager;
 import android.content.ComponentName;

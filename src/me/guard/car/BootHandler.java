@@ -1,4 +1,4 @@
-package com.watcher.car;
+package me.guard.car;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;

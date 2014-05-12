@@ -1,4 +1,4 @@
-package com.watcher.car;
+package me.guard.car;
 
 import android.content.ContentValues;
 import android.content.Context;
@@ -12,11 +12,11 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static android.location.LocationManager.GPS_PROVIDER;
-import static com.watcher.car.Database.Item.*;
+import static me.guard.car.Database.Item.*;
 
 public class Database extends SQLiteOpenHelper {
   public static final int DATABASE_VERSION = 2;
-  public static final String DATABASE_NAME = "CarWatcher.db";
+  public static final String DATABASE_NAME = "CarGuard.db";
   private final SQLiteDatabase sqlite;
 
   public Database(Context context) {
