@@ -20,6 +20,7 @@ import java.util.Map;
 
 import static android.bluetooth.BluetoothDevice.ACTION_ACL_CONNECTED;
 import static android.location.LocationManager.GPS_PROVIDER;
+import static android.support.v4.content.WakefulBroadcastReceiver.completeWakefulIntent;
 
 public class WatchingService extends IntentService {
 
@@ -27,10 +28,10 @@ public class WatchingService extends IntentService {
   public static final int LOCATION_UPDATES_MINIMUM_DISTANCE_METRES = 100;
   public static final int BLUETOOTH_CONNECTION_TIMEOUT_MILLIS = 15 * 60 * 1000;
   public static final int HEARTBEAT_TIMEOUT_MILLIS = 12 * 60 * 60 * 1000;
-  public static Date latestBluetoothConnectionTime;
-  public static Location lastKnownLocation;
-  public static Location lastSavedLocation;
-  public static Date lastSentTime = heartbeatTimeoutTime();
+
+  public static Date latestBluetoothConnectionTime = timeoutTime(BLUETOOTH_CONNECTION_TIMEOUT_MILLIS);
+  public static Location lastSentLocation;
+  public static Date lastSentTime = timeoutTime(HEARTBEAT_TIMEOUT_MILLIS);
 
   private Database database;
   private LocationManager locationManager;
@@ -58,7 +59,9 @@ public class WatchingService extends IntentService {
 
   @Override
   public void onDestroy() {
-    unregisterReceiver(bluetoothStatusHandler);
+    if (bluetoothStatusHandler != null) {
+      unregisterReceiver(bluetoothStatusHandler);
+    }
     super.onDestroy();
   }
 
@@ -66,37 +69,32 @@ public class WatchingService extends IntentService {
   protected void onHandleIntent(Intent intent) {
     handleLocationEvent(locationManager.getLastKnownLocation(GPS_PROVIDER));
     sendPreviousLocationsToServer();
-    TaskRunner.completeWakefulIntent(intent);
+    completeWakefulIntent(intent);
   }
 
   protected void handleLocationEvent(Location location) {
     Log.d(WatchingService.class.getSimpleName(), "Handling location event");
     if (location != null) {
-      boolean shouldSendHeartBeatLocation = lastSentTime.getTime() <= heartbeatTimeoutTime().getTime();
-      boolean isDistantLocation = lastKnownLocation == null || lastKnownLocation.distanceTo(location) >= 100;
+      boolean shouldSendHeartBeatLocation = lastSentTime.getTime() <= timeoutTime(HEARTBEAT_TIMEOUT_MILLIS).getTime();
+      boolean isProbablyMoving = lastSentLocation != null && lastSentLocation.distanceTo(location) >= 100 || location.getSpeed() >= 10;
 
-      if (shouldSendHeartBeatLocation || isDistantLocation && isBluetoothConnectionTimedOut()) {
+      if (shouldSendHeartBeatLocation || isProbablyMoving && isBluetoothConnectionTimedOut()) {
         try {
           sendLocationToServer(location);
-          lastSentTime = new Date();
           Log.d(WatchingService.class.getSimpleName(), "Location sent to the server");
         } catch (Exception e) {
           Log.d(WatchingService.class.getSimpleName(), "Failed to send location to the server", e);
-
-          if (!location.equals(lastSavedLocation) && !shouldSendHeartBeatLocation) {
-            storeLocationLocally(location);
-            lastSavedLocation = location;
-          }
+          storeLocationLocally(location);
+        } finally {
+          lastSentTime = new Date();
+          lastSentLocation = location;
         }
       }
-
-      lastKnownLocation = location;
     }
   }
 
   protected boolean isBluetoothConnectionTimedOut() {
-    return latestBluetoothConnectionTime == null ||
-      latestBluetoothConnectionTime.getTime() <= new Date().getTime() - BLUETOOTH_CONNECTION_TIMEOUT_MILLIS;
+    return latestBluetoothConnectionTime.getTime() <= timeoutTime(BLUETOOTH_CONNECTION_TIMEOUT_MILLIS).getTime();
   }
 
   protected void initializeBluetoothListener() {
@@ -139,8 +137,8 @@ public class WatchingService extends IntentService {
       put("sentTime", new Date().getTime());
     }};
 
-    if (lastKnownLocation != null) {
-      data.put("distance", location.distanceTo(lastKnownLocation));
+    if (lastSentLocation != null) {
+      data.put("distance", location.distanceTo(lastSentLocation));
     }
 
     try {
@@ -155,8 +153,8 @@ public class WatchingService extends IntentService {
     database.save(location);
   }
 
-  protected static Date heartbeatTimeoutTime() {
-    return new Date(new Date().getTime() - HEARTBEAT_TIMEOUT_MILLIS);
+  protected static Date timeoutTime(int timeoutMillis) {
+    return new Date(new Date().getTime() - timeoutMillis);
   }
 
   private void sendPreviousLocationsToServer() {
