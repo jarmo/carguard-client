@@ -9,7 +9,7 @@ import org.robolectric.RobolectricTestRunner;
 import java.util.Date;
 
 import static android.location.LocationManager.GPS_PROVIDER;
-import static com.watcher.car.WatchingService.HEARTBEAT_TIMEOUT_MILLIS;
+import static com.watcher.car.WatchingService.heartbeatTimeoutTime;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.*;
@@ -179,7 +179,7 @@ public class WatchingServiceTest {
     Location location = new Location(GPS_PROVIDER);
     location.setTime(new Date().getTime());
     WatchingService.lastKnownLocation = location;
-    WatchingService.lastSentTime = new Date(new Date().getTime() - HEARTBEAT_TIMEOUT_MILLIS);
+    WatchingService.lastSentTime = heartbeatTimeoutTime();
 
     service.handleLocationEvent(location);
 
@@ -196,7 +196,7 @@ public class WatchingServiceTest {
     Location location = new Location(GPS_PROVIDER);
     location.setTime(new Date().getTime());
     WatchingService.lastKnownLocation = location;
-    WatchingService.lastSentTime = new Date(new Date().getTime() - HEARTBEAT_TIMEOUT_MILLIS);
+    WatchingService.lastSentTime = heartbeatTimeoutTime();
 
     service.handleLocationEvent(location);
 
