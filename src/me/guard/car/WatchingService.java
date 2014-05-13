@@ -21,6 +21,8 @@ import java.util.Map;
 import static android.bluetooth.BluetoothDevice.ACTION_ACL_CONNECTED;
 import static android.location.LocationManager.GPS_PROVIDER;
 import static android.support.v4.content.WakefulBroadcastReceiver.completeWakefulIntent;
+import static me.guard.car.MainActivity.API_KEY;
+import static me.guard.car.MainActivity.PREFERENCES_NAME;
 
 public class WatchingService extends IntentService {
 
@@ -142,7 +144,7 @@ public class WatchingService extends IntentService {
     }
 
     try {
-      new HttpClient().post(new JSONObject(data).toString());
+      new HttpClient(getSharedPreferences(PREFERENCES_NAME, MODE_PRIVATE).getString(API_KEY, null)).post(new JSONObject(data).toString());
     } catch (Exception e) {
       Log.e(WatchingService.class.getSimpleName(), "Failed to send location", e);
       throw new RuntimeException(e);
