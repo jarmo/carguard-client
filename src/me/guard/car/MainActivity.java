@@ -1,7 +1,6 @@
 package me.guard.car;
 
 import android.app.Activity;
-import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.widget.EditText;
 
@@ -9,43 +8,22 @@ import java.math.BigInteger;
 import java.security.SecureRandom;
 import java.util.UUID;
 
+import static me.guard.car.Preferences.API_KEY_NAME;
+import static me.guard.car.Preferences.SECRET_NAME;
+
 public class MainActivity extends Activity {
-
-  public static final String PREFERENCES_NAME = "CarGuard";
-  public static final String API_KEY = "apiKey";
-  private static final String SECRET = "secret";
-
   @Override
   public void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.main);
-    ((EditText)findViewById(R.id.apiKeyText)).setText(getApiKey());
-    ((EditText)findViewById(R.id.secretText)).setText(getSecret());
+    fillTextFields();
 
     new TaskRunner().schedule(this);
   }
 
-  private String getApiKey() {
-    return getPreference(API_KEY, UUID.randomUUID().toString());
-  }
-
-  private String getSecret() {
-    return getPreference(SECRET, new BigInteger(64, new SecureRandom()).toString(32));
-  }
-
-  private String getPreference(String name, String defaultValue) {
-    SharedPreferences preferences = getPreferences();
-    if (preferences.contains(name)) {
-      return preferences.getString(name, null);
-    } else {
-      SharedPreferences.Editor editablePreferences = preferences.edit();
-      editablePreferences.putString(name, defaultValue);
-      editablePreferences.commit();
-      return defaultValue;
-    }
-  }
-
-  public SharedPreferences getPreferences() {
-    return getSharedPreferences(PREFERENCES_NAME, MODE_PRIVATE);
+  private void fillTextFields() {
+    Preferences preferences = new Preferences(this);
+    ((EditText)findViewById(R.id.apiKeyText)).setText(preferences.get(API_KEY_NAME, UUID.randomUUID().toString()));
+    ((EditText) findViewById(R.id.secretText)).setText(preferences.get(SECRET_NAME, new BigInteger(64, new SecureRandom()).toString(32)));
   }
 }
