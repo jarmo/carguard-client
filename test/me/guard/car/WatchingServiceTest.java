@@ -32,21 +32,37 @@ public class WatchingServiceTest {
   }
 
   @Test
-  public void initializeBluetoothListenerWhenConnectionHasTimedOut() {
+  public void initializeBluetoothListenerWhenNeeded() {
     WatchingService service = getService();
-    doReturn(true).when(service).isBluetoothConnectionTimedOut();
+    doReturn(true).when(service).shouldEstablishBluetoothConnection();
     service.initialize();
 
     verify(service).initializeBluetoothListener();
   }
 
   @Test
-  public void doesNotInitializeBluetoothListenerWhenConnectionHasNotTimedOut() {
+  public void doesNotInitializeBluetoothListenerWhenNotNeeded() {
     WatchingService service = getService();
-    doReturn(false).when(service).isBluetoothConnectionTimedOut();
+    doReturn(false).when(service).shouldEstablishBluetoothConnection();
     service.initialize();
 
     verify(service, never()).initializeBluetoothListener();
+  }
+
+  @Test
+  public void shouldEstablishBluetoothConnectionWhenTimeoutIsNear() {
+    WatchingService.latestBluetoothConnectionTime = timeoutTime(BLUETOOTH_CONNECTION_TIMEOUT_MILLIS - LOCATION_UPDATES_INTERVAL_MILLIS);
+
+    WatchingService service = getService();
+    assertTrue(service.shouldEstablishBluetoothConnection());
+  }
+
+  @Test
+  public void shouldNotEstablishBluetoothConnectionWhenEnoughTimeUntilTimeout() {
+    WatchingService.latestBluetoothConnectionTime = timeoutTime(BLUETOOTH_CONNECTION_TIMEOUT_MILLIS - 2 * LOCATION_UPDATES_INTERVAL_MILLIS);
+
+    WatchingService service = getService();
+    assertFalse(service.shouldEstablishBluetoothConnection());
   }
 
   @Test
@@ -59,7 +75,7 @@ public class WatchingServiceTest {
 
   @Test
   public void isBluetoothConnectionTimedOutReturnsFalseWhenBluetoothConnectionHasNotTimedOut() {
-    WatchingService.latestBluetoothConnectionTime = new Date(timeoutTime(BLUETOOTH_CONNECTION_TIMEOUT_MILLIS).getTime() + 1000);
+    WatchingService.latestBluetoothConnectionTime = timeoutTime(BLUETOOTH_CONNECTION_TIMEOUT_MILLIS - 1000);
 
     WatchingService service = getService();
     assertFalse(service.isBluetoothConnectionTimedOut());

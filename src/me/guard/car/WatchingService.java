@@ -52,7 +52,7 @@ public class WatchingService extends IntentService {
 
     initializeLocationListener();
 
-    if (isBluetoothConnectionTimedOut()) {
+    if (shouldEstablishBluetoothConnection()) {
       initializeBluetoothListener();
     }
   }
@@ -91,6 +91,10 @@ public class WatchingService extends IntentService {
         }
       }
     }
+  }
+
+  protected boolean shouldEstablishBluetoothConnection() {
+    return latestBluetoothConnectionTime.getTime() <= timeoutTime(BLUETOOTH_CONNECTION_TIMEOUT_MILLIS - LOCATION_UPDATES_INTERVAL_MILLIS).getTime();
   }
 
   protected boolean isBluetoothConnectionTimedOut() {
