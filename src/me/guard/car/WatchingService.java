@@ -12,7 +12,6 @@ import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
 import android.util.Log;
-import org.json.JSONObject;
 
 import java.util.Date;
 import java.util.HashMap;
@@ -143,7 +142,7 @@ public class WatchingService extends IntentService {
     }
 
     try {
-      new HttpClient(new Preferences(this).get(API_KEY_NAME)).post(new JSONObject(data).toString());
+      new HttpClient(new Preferences(this).get(API_KEY_NAME)).post(new EncryptedJSONObject(data).toString());
     } catch (Exception e) {
       Log.e(WatchingService.class.getSimpleName(), "Failed to send location", e);
       throw new RuntimeException(e);
