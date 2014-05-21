@@ -22,10 +22,6 @@ import java.util.Map;
 public class EncryptedJSONObject extends JSONObject {
   private final Cipher cipher;
 
-  public EncryptedJSONObject() {
-    this(new HashMap());
-  }
-
   public EncryptedJSONObject(Map copyFrom) {
     super(copyFrom);
 
@@ -57,16 +53,6 @@ public class EncryptedJSONObject extends JSONObject {
       SecretKey key = generateKey(salt, passPhrase);
       byte[] encrypted = doFinal(Cipher.ENCRYPT_MODE, key, iv, plainText.getBytes("UTF-8"));
       return base64(encrypted);
-    } catch (UnsupportedEncodingException e) {
-      throw fail(e);
-    }
-  }
-
-  public String decrypt(String salt, String iv, String passPhrase, String cipherText) {
-    try {
-      SecretKey key = generateKey(salt, passPhrase);
-      byte[] decrypted = doFinal(Cipher.DECRYPT_MODE, key, iv, base64(cipherText));
-      return new String(decrypted, "UTF-8");
     } catch (UnsupportedEncodingException e) {
       throw fail(e);
     }
@@ -107,10 +93,6 @@ public class EncryptedJSONObject extends JSONObject {
 
   public static String base64(byte[] bytes) {
     return new String(Base64.encodeBase64(bytes));
-  }
-
-  public static byte[] base64(String str) {
-    return Base64.decodeBase64(str.getBytes());
   }
 
   public static String hex(byte[] bytes) {
