@@ -21,6 +21,7 @@ import static android.bluetooth.BluetoothDevice.ACTION_ACL_CONNECTED;
 import static android.location.LocationManager.GPS_PROVIDER;
 import static android.support.v4.content.WakefulBroadcastReceiver.completeWakefulIntent;
 import static me.guard.car.Preferences.API_KEY_NAME;
+import static me.guard.car.Preferences.SECRET_NAME;
 
 public class WatchingService extends IntentService {
 
@@ -137,8 +138,7 @@ public class WatchingService extends IntentService {
       put("latitude", location.getLatitude());
       put("longitude", location.getLongitude());
       put("speed", location.getSpeed());
-      put("time", location.getTime());
-      put("sentTime", new Date().getTime());
+      put("fixTime", location.getTime());
     }};
 
     if (lastSentLocation != null) {
@@ -146,7 +146,8 @@ public class WatchingService extends IntentService {
     }
 
     try {
-      new HttpClient(new Preferences(this).get(API_KEY_NAME)).post(new EncryptedJSONObject(data).toString());
+      Preferences preferences = new Preferences(this);
+      new HttpClient(preferences.get(API_KEY_NAME)).post(new EncryptedJSONObject(data, preferences.get(SECRET_NAME)).toString());
     } catch (Exception e) {
       Log.e(WatchingService.class.getSimpleName(), "Failed to send location", e);
       throw new RuntimeException(e);

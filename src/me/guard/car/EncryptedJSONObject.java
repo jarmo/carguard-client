@@ -21,9 +21,11 @@ import java.util.Map;
 
 public class EncryptedJSONObject extends JSONObject {
   private final Cipher cipher;
+  private final String password;
 
-  public EncryptedJSONObject(Map copyFrom) {
+  public EncryptedJSONObject(Map copyFrom, String password) {
     super(copyFrom);
+    this.password = password;
 
     try {
       cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
@@ -37,20 +39,20 @@ public class EncryptedJSONObject extends JSONObject {
   @Override
   public String toString() {
     final String salt = random(32);
-    final String iv = random(16);
+    final String iv = random(cipher.getBlockSize());
     final String unencryptedData = super.toString();
     HashMap<String, Object> encryptedData = new HashMap<String, Object>() {{
       put("salt", salt);
       put("iv", iv);
-      put("data", encrypt(salt, iv, "fooobaar", unencryptedData));
+      put("data", encrypt(salt, iv, password, unencryptedData));
     }};
 
     return new JSONObject(encryptedData).toString();
   }
 
-  private String encrypt(String salt, String iv, String passPhrase, String plainText) {
+  private String encrypt(String salt, String iv, String password, String plainText) {
     try {
-      SecretKey key = generateKey(salt, passPhrase);
+      SecretKey key = generateKey(salt, password);
       byte[] encrypted = doFinal(Cipher.ENCRYPT_MODE, key, iv, plainText.getBytes("UTF-8"));
       return base64(encrypted);
     } catch (UnsupportedEncodingException e) {
@@ -73,10 +75,10 @@ public class EncryptedJSONObject extends JSONObject {
     }
   }
 
-  private SecretKey generateKey(String salt, String passphrase) {
+  private SecretKey generateKey(String salt, String password) {
     try {
       SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1");
-      KeySpec spec = new PBEKeySpec(passphrase.toCharArray(), hex(salt), 10000, 128);
+      KeySpec spec = new PBEKeySpec(password.toCharArray(), hex(salt), 10000, 128);
       return new SecretKeySpec(factory.generateSecret(spec).getEncoded(), "AES");
     } catch (NoSuchAlgorithmException e) {
       throw fail(e);
@@ -86,9 +88,9 @@ public class EncryptedJSONObject extends JSONObject {
   }
 
   public static String random(int length) {
-    byte[] salt = new byte[length];
-    new SecureRandom().nextBytes(salt);
-    return hex(salt);
+    byte[] randomBytes = new byte[length];
+    new SecureRandom().nextBytes(randomBytes);
+    return hex(randomBytes);
   }
 
   public static String base64(byte[] bytes) {
