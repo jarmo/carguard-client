@@ -32,7 +32,7 @@ Installation
 * Clone this project `git clone https://github.com/jarmo/carguard-client.git`
 * Build apk `ant debug`
 * Plug that Android phone into your PC
-* Install apk on the phone `adb -d install bin\car_guard-debug.apk`
+* Install apk on the phone `adb -d install bin/car_guard-debug.apk`
 * Enable GPS in the phone
 * Enable Bluetooth in the phone
 * Pair the phone over Bluetooth with your main phone - this is needed for detecting if you are driving
