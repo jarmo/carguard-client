@@ -15,7 +15,7 @@ public class HttpClient {
 
   public void post(String data) {
     try {
-      HttpURLConnection conn = openConnection("http://leetor.no-ip.org:8010/map/" + this.apiKey);
+      HttpURLConnection conn = openConnection("http://carguard.me/map/" + this.apiKey);
       conn.setDoOutput(true);
       OutputStreamWriter wr = new OutputStreamWriter(conn.getOutputStream());
       wr.write(data);
