@@ -9,19 +9,19 @@ Check out server at https://github.com/jarmo/carguard-server
 Features
 ---------------
 
-* Transparent: client and server code is open-source - there's nothing secret going on;
-* Private: only encrypted location data is sent to the server - just you can decrypt it;
-* Smart: only needed location data is sent to the server - e.g. no need to send when you are driving;
-* Persistent: app runs even when it is exited or when phone is restarted.
+* Transparent: client and server code is open-source - there's nothing secret going on
+* Private: only encrypted location data is sent to the server - just you can decrypt it
+* Smart: only needed location data is sent to the server - e.g. no need to send when you are driving
+* Persistent: app runs even when it is exited or when phone is restarted
 
 
 Requirements
 ---------------
 
 * A car;
-* An Android phone with Android version >= 4.0.3 (SDK API level 15);
-* A SIM card for the phone with a cellular data access;
-* Car charger for the phone.
+* An Android phone with Android version >= 4.0.3 (SDK API level 15)
+* A SIM card for the phone with a cellular data access
+* Car charger for the phone
 
 
 Installation
