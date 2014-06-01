@@ -45,6 +45,6 @@ Tips & Tricks
 ---------------
 
 * Set your phone as silent
-* Turn of WiFi
+* Turn off WiFi
 * Remove all unneeded software to reduce network traffic - maybe even install modified Android like CyanogenMod.
 * Make sure that network data is allowed when roaming - you wan't to track your car if it's taken abroad as well ;)
