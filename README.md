@@ -18,7 +18,7 @@ Features
 Requirements
 ---------------
 
-* A car;
+* A car
 * An Android phone with Android version >= 4.0.3 (SDK API level 15)
 * A SIM card for the phone with a cellular data access
 * Car charger for the phone
@@ -34,9 +34,10 @@ Installation
 * Plug that Android phone into your PC
 * Install apk on the phone `adb -d install bin\car_guard-debug.apk`
 * Enable GPS in the phone
+* Enable Bluetooth in the phone
+* Pair the phone over Bluetooth with your main phone - this is needed for detecting if you are driving
 * Start application in the phone
 * Store `API key` and `Secret` for later use - without them you cannot view your car location!
-* Pair that Android phone over Bluetooth with your main phone - this is needed for detecting if you are driving
 * Install phone into your car by providing continuous power
 * Head to http://carguard.me to see your car location
 
