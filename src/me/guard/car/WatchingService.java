@@ -18,7 +18,10 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static android.bluetooth.BluetoothDevice.ACTION_ACL_CONNECTED;
+import static android.content.Intent.ACTION_BATTERY_CHANGED;
 import static android.location.LocationManager.GPS_PROVIDER;
+import static android.os.BatteryManager.EXTRA_LEVEL;
+import static android.os.BatteryManager.EXTRA_SCALE;
 import static android.support.v4.content.WakefulBroadcastReceiver.completeWakefulIntent;
 import static me.guard.car.Preferences.API_KEY_NAME;
 import static me.guard.car.Preferences.SECRET_NAME;
@@ -134,16 +137,7 @@ public class WatchingService extends IntentService {
   }
 
   protected void sendLocationToServer(final Location location) {
-    Map<String, Object> data = new HashMap<String, Object>() {{
-      put("latitude", location.getLatitude());
-      put("longitude", location.getLongitude());
-      put("speed", location.getSpeed());
-      put("fixTime", location.getTime());
-    }};
-
-    if (lastSentLocation != null) {
-      data.put("distance", location.distanceTo(lastSentLocation));
-    }
+    Map<String, Object> data = getData(location, lastSentLocation);
 
     try {
       Preferences preferences = new Preferences(this);
@@ -152,6 +146,26 @@ public class WatchingService extends IntentService {
       Log.e(WatchingService.class.getSimpleName(), "Failed to send location", e);
       throw new RuntimeException(e);
     }
+  }
+
+  private Map<String, Object> getData(final Location location, Location lastSentLocationLocal) {
+    Intent batteryStatus = registerReceiver(null, new IntentFilter(ACTION_BATTERY_CHANGED));
+    int level = batteryStatus.getIntExtra(EXTRA_LEVEL, -1);
+    int scale = batteryStatus.getIntExtra(EXTRA_SCALE, -1);
+    final float batteryPercentage = level / (float)scale;
+
+    Map<String, Object> data = new HashMap<String, Object>() {{
+      put("latitude", location.getLatitude());
+      put("longitude", location.getLongitude());
+      put("speed", location.getSpeed());
+      put("battery", batteryPercentage);
+      put("fixTime", location.getTime());
+    }};
+
+    if (lastSentLocationLocal != null) {
+      data.put("distance", location.distanceTo(lastSentLocationLocal));
+    }
+    return data;
   }
 
   protected void storeLocationLocally(Location location) {
