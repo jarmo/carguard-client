@@ -3,6 +3,7 @@ package me.guard.car;
 import org.apache.commons.codec.DecoderException;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.binary.Hex;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import javax.crypto.*;
@@ -17,14 +18,13 @@ import java.security.SecureRandom;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.KeySpec;
 import java.util.HashMap;
-import java.util.Map;
 
 public class EncryptedJSONObject extends JSONObject {
   private final Cipher cipher;
   private final String password;
 
-  public EncryptedJSONObject(Map copyFrom, String password) {
-    super(copyFrom);
+  public EncryptedJSONObject(JSONObject json, String password) throws JSONException {
+    super(json.toString());
     this.password = password;
 
     try {
@@ -87,21 +87,21 @@ public class EncryptedJSONObject extends JSONObject {
     }
   }
 
-  public static String random(int length) {
+  private static String random(int length) {
     byte[] randomBytes = new byte[length];
     new SecureRandom().nextBytes(randomBytes);
     return hex(randomBytes);
   }
 
-  public static String base64(byte[] bytes) {
+  private static String base64(byte[] bytes) {
     return new String(Base64.encodeBase64(bytes));
   }
 
-  public static String hex(byte[] bytes) {
+  private static String hex(byte[] bytes) {
     return new String(Hex.encodeHex(bytes));
   }
 
-  public static byte[] hex(String str) {
+  private static byte[] hex(String str) {
     try {
       return Hex.decodeHex(str.toCharArray());
     } catch (DecoderException e) {

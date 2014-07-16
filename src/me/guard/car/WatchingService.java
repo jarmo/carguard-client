@@ -14,30 +14,20 @@ import android.os.Bundle;
 import android.util.Log;
 
 import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
 
 import static android.bluetooth.BluetoothDevice.ACTION_ACL_CONNECTED;
-import static android.content.Intent.ACTION_BATTERY_CHANGED;
 import static android.location.LocationManager.GPS_PROVIDER;
-import static android.os.BatteryManager.EXTRA_LEVEL;
-import static android.os.BatteryManager.EXTRA_SCALE;
 import static android.support.v4.content.WakefulBroadcastReceiver.completeWakefulIntent;
-import static me.guard.car.Preferences.API_KEY_NAME;
-import static me.guard.car.Preferences.SECRET_NAME;
 
 public class WatchingService extends IntentService {
-
   public static final int LOCATION_UPDATES_INTERVAL_MILLIS = 60 * 1000;
   public static final int LOCATION_UPDATES_MINIMUM_DISTANCE_METRES = 100;
   public static final int BLUETOOTH_CONNECTION_TIMEOUT_MILLIS = 15 * 60 * 1000;
   public static final int HEARTBEAT_TIMEOUT_MILLIS = 12 * 60 * 60 * 1000;
 
+  static LocationTracker locationTracker = new LocationTracker();
   public static Date latestBluetoothConnectionTime = timeoutTime(BLUETOOTH_CONNECTION_TIMEOUT_MILLIS);
-  public static Location lastSentLocation;
-  public static Date lastSentTime = timeoutTime(HEARTBEAT_TIMEOUT_MILLIS);
 
-  private Database database;
   private LocationManager locationManager;
   private BroadcastReceiver bluetoothStatusHandler;
 
@@ -52,8 +42,7 @@ public class WatchingService extends IntentService {
   }
 
   protected void initialize() {
-    database = new Database(this);
-
+    locationTracker.setContext(this);
     initializeLocationListener();
 
     if (shouldEstablishBluetoothConnection()) {
@@ -72,29 +61,28 @@ public class WatchingService extends IntentService {
   @Override
   protected void onHandleIntent(Intent intent) {
     handleLocationEvent(locationManager.getLastKnownLocation(GPS_PROVIDER));
-    sendPreviousLocationsToServer();
     completeWakefulIntent(intent);
   }
 
   protected void handleLocationEvent(Location location) {
     Log.d(WatchingService.class.getSimpleName(), "Handling location event");
-    if (location != null) {
-      boolean shouldSendHeartBeatLocation = lastSentTime.getTime() <= timeoutTime(HEARTBEAT_TIMEOUT_MILLIS).getTime();
-      boolean isProbablyMoving = lastSentLocation != null && lastSentLocation.distanceTo(location) >= 100 || location.getSpeed() >= 10;
+    //boolean shouldSendHeartBeatLocation = lastSentTime.getTime() <= timeoutTime(HEARTBEAT_TIMEOUT_MILLIS).getTime();
+    //boolean isProbablyMoving = lastSentLocation != null && lastSentLocation.distanceTo(location) >= 100 || location.getSpeed() >= 10;
+    locationTracker.sendLocationToServerWhenMoving(location);
+    locationTracker.sendPreviousLocationsToServer();
 
-      if (shouldSendHeartBeatLocation || isProbablyMoving && isBluetoothConnectionTimedOut()) {
-        try {
-          sendLocationToServer(location);
-          Log.d(WatchingService.class.getSimpleName(), "Location sent to the server");
-        } catch (Exception e) {
-          Log.d(WatchingService.class.getSimpleName(), "Failed to send location to the server", e);
-          storeLocationLocally(location);
-        } finally {
-          lastSentTime = new Date();
-          lastSentLocation = location;
-        }
-      }
-    }
+//      if (shouldSendHeartBeatLocation || isProbablyMoving && isBluetoothConnectionTimedOut()) {
+//        try {
+//          sendLocationToServer(location);
+//          Log.d(WatchingService.class.getSimpleName(), "Location sent to the server");
+//        } catch (Exception e) {
+//          Log.d(WatchingService.class.getSimpleName(), "Failed to send location to the server", e);
+//          storeLocationLocally(location);
+//        } finally {
+//          lastSentTime = new Date();
+//          lastSentLocation = location;
+//        }
+//      }
   }
 
   protected boolean shouldEstablishBluetoothConnection() {
@@ -136,54 +124,7 @@ public class WatchingService extends IntentService {
       });
   }
 
-  protected void sendLocationToServer(final Location location) {
-    Map<String, Object> data = getData(location, lastSentLocation);
-
-    try {
-      Preferences preferences = new Preferences(this);
-      new HttpClient(preferences.get(API_KEY_NAME)).post(new EncryptedJSONObject(data, preferences.get(SECRET_NAME)).toString());
-    } catch (Exception e) {
-      Log.e(WatchingService.class.getSimpleName(), "Failed to send location", e);
-      throw new RuntimeException(e);
-    }
-  }
-
-  private Map<String, Object> getData(final Location location, Location lastSentLocationLocal) {
-    Intent batteryStatus = registerReceiver(null, new IntentFilter(ACTION_BATTERY_CHANGED));
-    int level = batteryStatus.getIntExtra(EXTRA_LEVEL, -1);
-    int scale = batteryStatus.getIntExtra(EXTRA_SCALE, -1);
-    final float batteryPercentage = level / (float)scale;
-
-    Map<String, Object> data = new HashMap<String, Object>() {{
-      put("latitude", location.getLatitude());
-      put("longitude", location.getLongitude());
-      put("speed", location.getSpeed());
-      put("battery", batteryPercentage);
-      put("fixTime", location.getTime());
-    }};
-
-    if (lastSentLocationLocal != null) {
-      data.put("distance", location.distanceTo(lastSentLocationLocal));
-    }
-    return data;
-  }
-
-  protected void storeLocationLocally(Location location) {
-    database.save(location);
-  }
-
   protected static Date timeoutTime(int timeoutMillis) {
     return new Date(new Date().getTime() - timeoutMillis);
-  }
-
-  private void sendPreviousLocationsToServer() {
-    for (Map.Entry<String, Location> locationWithId : database.getStoredLocations().entrySet()) {
-      try {
-        sendLocationToServer(locationWithId.getValue());
-        database.delete(locationWithId.getKey());
-      } catch (Exception e) {
-        Log.e(WatchingService.class.getSimpleName(), "Failed to send previous location", e);
-      }
-    }
   }
 }

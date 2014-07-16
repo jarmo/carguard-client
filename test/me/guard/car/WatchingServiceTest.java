@@ -6,8 +6,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.robolectric.RobolectricTestRunner;
 
-import java.util.Date;
-
 import static android.location.LocationManager.GPS_PROVIDER;
 import static me.guard.car.WatchingService.*;
 import static org.junit.Assert.assertFalse;
@@ -19,12 +17,11 @@ public class WatchingServiceTest {
   @Before
   public void clearState() {
     WatchingService.latestBluetoothConnectionTime = timeoutTime(BLUETOOTH_CONNECTION_TIMEOUT_MILLIS);
-    WatchingService.lastSentLocation = null;
-    WatchingService.lastSentTime = new Date();
+    WatchingService.locationTracker = new LocationTracker();
   }
 
   @Test
-  public void initializesLocationListener() {
+  public void initialize_initializesLocationListener() {
     WatchingService service = getService();
     service.initialize();
 
@@ -32,7 +29,16 @@ public class WatchingServiceTest {
   }
 
   @Test
-  public void initializeBluetoothListenerWhenNeeded() {
+  public void initialize_setsLocationTrackerContext() {
+    WatchingService service = getService();
+    WatchingService.locationTracker = spy(new LocationTracker());
+    service.initialize();
+
+    verify(WatchingService.locationTracker).setContext(service);
+  }
+
+  @Test
+  public void initialize_initializesBluetoothListenerWhenNeeded() {
     WatchingService service = getService();
     doReturn(true).when(service).shouldEstablishBluetoothConnection();
     service.initialize();
@@ -41,7 +47,7 @@ public class WatchingServiceTest {
   }
 
   @Test
-  public void doesNotInitializeBluetoothListenerWhenNotNeeded() {
+  public void initialize_doesNotInitializeBluetoothListenerWhenNotNeeded() {
     WatchingService service = getService();
     doReturn(false).when(service).shouldEstablishBluetoothConnection();
     service.initialize();
@@ -50,7 +56,7 @@ public class WatchingServiceTest {
   }
 
   @Test
-  public void shouldEstablishBluetoothConnectionWhenTimeoutIsNear() {
+  public void shouldEstablishBluetoothConnection_trueWhenTimeoutIsNear() {
     WatchingService.latestBluetoothConnectionTime = timeoutTime(BLUETOOTH_CONNECTION_TIMEOUT_MILLIS - LOCATION_UPDATES_INTERVAL_MILLIS);
 
     WatchingService service = getService();
@@ -58,7 +64,7 @@ public class WatchingServiceTest {
   }
 
   @Test
-  public void shouldNotEstablishBluetoothConnectionWhenEnoughTimeUntilTimeout() {
+  public void shouldEstablishBluetoothConnection_falseWhenTimeoutIsNotExceeded() {
     WatchingService.latestBluetoothConnectionTime = timeoutTime(BLUETOOTH_CONNECTION_TIMEOUT_MILLIS - 2 * LOCATION_UPDATES_INTERVAL_MILLIS);
 
     WatchingService service = getService();
@@ -66,7 +72,7 @@ public class WatchingServiceTest {
   }
 
   @Test
-  public void isBluetoothConnectionTimedOutReturnsTrueWhenBluetoothConnectionHasTimedOut() {
+  public void isBluetoothConnectionTimedOut_trueWhenBluetoothConnectionHasTimedOut() {
     WatchingService.latestBluetoothConnectionTime = timeoutTime(BLUETOOTH_CONNECTION_TIMEOUT_MILLIS);
 
     WatchingService service = getService();
@@ -74,7 +80,7 @@ public class WatchingServiceTest {
   }
 
   @Test
-  public void isBluetoothConnectionTimedOutReturnsFalseWhenBluetoothConnectionHasNotTimedOut() {
+  public void isBluetoothConnectionTimedOut_falseWhenBluetoothConnectionHasNotTimedOut() {
     WatchingService.latestBluetoothConnectionTime = timeoutTime(BLUETOOTH_CONNECTION_TIMEOUT_MILLIS - 1000);
 
     WatchingService service = getService();
@@ -82,114 +88,29 @@ public class WatchingServiceTest {
   }
 
   @Test
-  public void handleLocationEventIgnoresWhenNoLocation() {
+  public void handleLocationEvent_sendsLocationToServerWhenMoving() {
     WatchingService service = getService();
-    service.handleLocationEvent(null);
-
-    verify(service, never()).sendLocationToServer(any(Location.class));
-  }
-
-  @Test
-  public void handleLocationEventIgnoresNearLocations() {
-    WatchingService service = getService();
-    doReturn(true).when(service).isBluetoothConnectionTimedOut();
-
-    Location location1 = spy(new Location(GPS_PROVIDER));
-    WatchingService.lastSentLocation = location1;
-
-    Location location2 = new Location(GPS_PROVIDER);
-    doReturn(99f).when(location1).distanceTo(location2);
-    service.handleLocationEvent(location2);
-
-    verify(service, never()).sendLocationToServer(any(Location.class));
-  }
-
-  @Test
-  public void handleLocationEventDoesNotIgnoreLocationsFurtherAway() {
-    WatchingService service = getService();
-    doReturn(true).when(service).isBluetoothConnectionTimedOut();
-    doNothing().when(service).sendLocationToServer(any(Location.class));
-
-    Location location1 = spy(new Location(GPS_PROVIDER));
-    WatchingService.lastSentLocation = location1;
-
-    Location location2 = new Location(GPS_PROVIDER);
-    doReturn(100f).when(location1).distanceTo(location2);
-    service.handleLocationEvent(location2);
-
-    verify(service).sendLocationToServer(any(Location.class));
-  }
-
-  @Test
-  public void handleLocationEventIgnoresLocationsWithSlowSpeeds() {
-    WatchingService service = getService();
-    doReturn(true).when(service).isBluetoothConnectionTimedOut();
-    doNothing().when(service).sendLocationToServer(any(Location.class));
-
-    Location location = spy(new Location(GPS_PROVIDER));
-    doReturn(9f).when(location).getSpeed();
-    service.handleLocationEvent(location);
-
-    verify(service, never()).sendLocationToServer(any(Location.class));
-  }
-
-  @Test
-  public void handleLocationEventDoesNotIgnoreLocationsWithFasterSpeeds() {
-    WatchingService service = getService();
-    doReturn(true).when(service).isBluetoothConnectionTimedOut();
-    doNothing().when(service).sendLocationToServer(any(Location.class));
-
-    Location location1 = spy(new Location(GPS_PROVIDER));
-    WatchingService.lastSentLocation = location1;
-
-    Location location2 = spy(new Location(GPS_PROVIDER));
-    doReturn(99f).when(location1).distanceTo(location2);
-    doReturn(10f).when(location2).getSpeed();
-    service.handleLocationEvent(location2);
-
-    verify(service).sendLocationToServer(any(Location.class));
-  }
-
-  @Test
-  public void handleLocationEventDoesNotSendLocationToServerWhenBluetoothConnectionHasNotTimedOut() {
-    WatchingService service = getService();
-    doReturn(false).when(service).isBluetoothConnectionTimedOut();
-    Location location = spy(new Location(GPS_PROVIDER));
-    doReturn(10f).when(location).getSpeed();
-    service.handleLocationEvent(location);
-
-    verify(service, never()).sendLocationToServer(any(Location.class));
-    verify(service, never()).storeLocationLocally(any(Location.class));
-  }
-
-  @Test
-  public void handleLocationEventStoresLocationLocallyFailedToSendToServer() {
-    WatchingService service = getService();
-    doReturn(true).when(service).isBluetoothConnectionTimedOut();
-    doThrow(RuntimeException.class).when(service).sendLocationToServer(any(Location.class));
-    doNothing().when(service).storeLocationLocally(any(Location.class));
-    Location location = spy(new Location(GPS_PROVIDER));
-    doReturn(10f).when(location).getSpeed();
-    service.handleLocationEvent(location);
-
-    verify(service).sendLocationToServer(location);
-    verify(service).storeLocationLocally(location);
-  }
-
-  @Test
-  public void handleLocationEventSendsLocationToServerWhenHeartbeatTimeoutHasBeenReached() {
-    WatchingService service = getService();
-    doReturn(false).when(service).isBluetoothConnectionTimedOut();
-    doNothing().when(service).sendLocationToServer(any(Location.class));
+    WatchingService.locationTracker = spy(new LocationTracker());
+    doNothing().when(WatchingService.locationTracker).sendLocationToServerWhenMoving(any(Location.class));
+    doNothing().when(WatchingService.locationTracker).sendPreviousLocationsToServer();
 
     Location location = new Location(GPS_PROVIDER);
-    location.setTime(new Date().getTime());
-    WatchingService.lastSentLocation = location;
-    WatchingService.lastSentTime = timeoutTime(HEARTBEAT_TIMEOUT_MILLIS);
-
     service.handleLocationEvent(location);
 
-    verify(service).sendLocationToServer(location);
+    verify(WatchingService.locationTracker).sendLocationToServerWhenMoving(location);
+  }
+
+  @Test
+  public void handleLocationEvent_sendsPreviousLocationsToServer() {
+    WatchingService service = getService();
+    WatchingService.locationTracker = spy(new LocationTracker());
+    doNothing().when(WatchingService.locationTracker).sendLocationToServerWhenMoving(any(Location.class));
+    doNothing().when(WatchingService.locationTracker).sendPreviousLocationsToServer();
+
+    Location location = new Location(GPS_PROVIDER);
+    service.handleLocationEvent(location);
+
+    verify(WatchingService.locationTracker).sendPreviousLocationsToServer();
   }
 
   private WatchingService getService() {

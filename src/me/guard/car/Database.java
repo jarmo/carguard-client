@@ -5,17 +5,18 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
-import android.location.Location;
 import android.provider.BaseColumns;
+import org.json.JSONException;
+import org.json.JSONObject;
 
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
-import static android.location.LocationManager.GPS_PROVIDER;
 import static me.guard.car.Database.Item.*;
 
 public class Database extends SQLiteOpenHelper {
-  public static final int DATABASE_VERSION = 2;
+  public static final int DATABASE_VERSION = 3;
   public static final String DATABASE_NAME = "CarGuard.db";
   private final SQLiteDatabase sqlite;
 
@@ -25,30 +26,25 @@ public class Database extends SQLiteOpenHelper {
     sqlite = getWritableDatabase();
   }
 
-  public void save(Location location) {
+  public void save(JSONObject data) {
     ContentValues values = new ContentValues();
-    values.put(LATITUDE, location.getLatitude());
-    values.put(LONGITUDE, location.getLongitude());
-    values.put(SPEED, location.getSpeed());
-    values.put(CREATED_AT, location.getTime());
+    values.put(DATA, data.toString());
+    values.put(CREATED_AT, new Date().getTime());
 
     sqlite.insert(TABLE_NAME, "null", values);
   }
 
-  public Map<String, Location> getStoredLocations() {
-    Map<String, Location> locations = new HashMap<String, Location>();
-    Cursor cursor = sqlite.query(TABLE_NAME, new String[]{_ID, LATITUDE, LONGITUDE, SPEED, CREATED_AT}, null, null, null, null, CREATED_AT + " DESC");
+  public Map<String, JSONObject> getStoredLocationsData() {
+    Map<String, JSONObject> locationsById = new HashMap<String, JSONObject>();
+    Cursor cursor = sqlite.query(TABLE_NAME, new String[]{_ID, DATA, CREATED_AT}, null, null, null, null, CREATED_AT + " DESC");
     while (cursor.moveToNext()) {
-      Location location = new Location(GPS_PROVIDER);
-      location.setLatitude(cursor.getDouble(cursor.getColumnIndex(LATITUDE)));
-      location.setLongitude(cursor.getDouble(cursor.getColumnIndex(LONGITUDE)));
-      location.setSpeed(cursor.getFloat(cursor.getColumnIndex(SPEED)));
-      location.setTime(cursor.getLong(cursor.getColumnIndex(CREATED_AT)));
-
-      locations.put(cursor.getString(cursor.getColumnIndex(_ID)), location);
+      try {
+        locationsById.put(cursor.getString(cursor.getColumnIndex(_ID)), new JSONObject(cursor.getString(cursor.getColumnIndex(DATA))));
+      } catch (JSONException ignored) {
+      }
     }
 
-    return locations;
+    return locationsById;
   }
 
   public void delete(String locationId) {
@@ -59,9 +55,7 @@ public class Database extends SQLiteOpenHelper {
   public void onCreate(SQLiteDatabase db) {
     db.execSQL("create table " + TABLE_NAME + "(" +
         _ID + " INTEGER PRIMARY KEY," +
-        LATITUDE + " REAL," +
-        LONGITUDE + " REAL," +
-        SPEED + " REAL," +
+        DATA + " TEXT," +
         CREATED_AT + " INTEGER)"
     );
   }
@@ -79,9 +73,7 @@ public class Database extends SQLiteOpenHelper {
 
   public static abstract class Item implements BaseColumns {
     public static final String TABLE_NAME = "location";
-    public static final String LATITUDE = "latitude";
-    public static final String LONGITUDE = "longitude";
-    public static final String SPEED = "speed";
+    public static final String DATA = "data";
     public static final String CREATED_AT = "created_at";
   }
 }
