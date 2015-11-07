@@ -30,7 +30,7 @@ public class LocationTracker implements Serializable {
   private transient Context context;
   private transient LocationManager locationManager;
 
-  LimitedQueue<SerializableLocation> limitedQueue = new LimitedQueue<SerializableLocation>(STORED_LOCATIONS_COUNT);
+  LimitedQueue<SerializableLocation> recentLocations = new LimitedQueue<SerializableLocation>(STORED_LOCATIONS_COUNT);
   LastMovingLocation lastMovingLocation;
   transient BatteryLevelManager batteryLevelManager = new BatteryLevelManager();
   public boolean hasSentLowBatteryAlert;
@@ -106,13 +106,13 @@ public class LocationTracker implements Serializable {
     SerializableLocation lastKnownLocation = getLastKnownLocation();
     if (lastKnownLocation == null) return false;
 
-    limitedQueue.add(lastKnownLocation);
+    recentLocations.add(lastKnownLocation);
 
     if (lastMovingLocation == null) return true;
-    if (limitedQueue.size() != STORED_LOCATIONS_COUNT) return false;
+    if (recentLocations.size() != STORED_LOCATIONS_COUNT) return false;
 
-    for (SerializableLocation storedLocation : limitedQueue) {
-      if (lastMovingLocation.location.getLocation().distanceTo(storedLocation.getLocation()) < LOCATION_UPDATES_MINIMUM_DISTANCE_IN_METRES)
+    for (SerializableLocation recentLocation : recentLocations) {
+      if (lastMovingLocation.location.getLocation().distanceTo(recentLocation.getLocation()) < LOCATION_UPDATES_MINIMUM_DISTANCE_IN_METRES)
         return false;
     }
 
@@ -145,6 +145,7 @@ public class LocationTracker implements Serializable {
     Preferences preferences = new Preferences(context);
     try {
       JSONObject json = new EncryptedJSONObject(data, preferences.get(SECRET_NAME));
+
       if (batteryLevelManager.isLowBattery()) {
         json = new JSONObject(json.toString());
         json.put("lowBattery", true);
@@ -152,6 +153,7 @@ public class LocationTracker implements Serializable {
       } else {
         hasSentLowBatteryAlert = false;
       }
+
       new HttpClient("/map/" + preferences.get(API_KEY_NAME)).post(json.toString());
     } catch (JSONException e) {
       throw new RuntimeException(e);

@@ -61,6 +61,7 @@ public class WatchingService extends IntentService {
     boolean shouldSendHeartbeatLocation = locationTracker.shouldSendHeartbeatLocation();
     boolean isBluetoothConnectionTimedOut = bluetoothConnectionManager.isConnectionTimedOut();
     boolean isMoving = locationTracker.isMoving();
+
     if (isLowBattery && !hasSentLowBatteryAlert || !isLowBattery && hasSentLowBatteryAlert || shouldSendHeartbeatLocation || isBluetoothConnectionTimedOut && isMoving) {
       Map<String, Object> debugInformation = new HashMap<String, Object>();
       debugInformation.put("isLowBattery", isLowBattery);
@@ -83,7 +84,7 @@ public class WatchingService extends IntentService {
       Object object = Marshal.load(openFileInput("carguard-watching-service-location-tracker.ser"));
       if (object != null) {
         LocationTracker locationTrackerFromFile = (LocationTracker) object;
-        locationTracker.limitedQueue = locationTrackerFromFile.limitedQueue;
+        locationTracker.recentLocations = locationTrackerFromFile.recentLocations;
         locationTracker.hasSentLowBatteryAlert = locationTrackerFromFile.hasSentLowBatteryAlert;
         locationTracker.lastMovingLocation = locationTrackerFromFile.lastMovingLocation;
       }
