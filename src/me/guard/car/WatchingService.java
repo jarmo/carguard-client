@@ -4,23 +4,16 @@ import android.app.IntentService;
 import android.content.Context;
 import android.content.Intent;
 
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.io.OptionalDataException;
-import java.io.StreamCorruptedException;
 import java.util.HashMap;
 import java.util.Map;
 
 import static android.support.v4.content.WakefulBroadcastReceiver.completeWakefulIntent;
 
 public class WatchingService extends IntentService {
-  static LocationTracker locationTracker = new LocationTracker();
-  static BluetoothConnectionManager bluetoothConnectionManager = new BluetoothConnectionManager();
-  static BatteryLevelManager batteryLevelManager = new BatteryLevelManager();
+  LocationTracker locationTracker;
+  BluetoothConnectionManager bluetoothConnectionManager;
+  BatteryLevelManager batteryLevelManager;
 
   public WatchingService() {
     super(WatchingService.class.getSimpleName());
@@ -33,19 +26,10 @@ public class WatchingService extends IntentService {
   }
 
   protected void initialize() {
-    Object object = deserializeObject("carguard-watching-service-location-tracker.ser");
-    if (object != null) {
-      LocationTracker deserializedLocationTracker = (LocationTracker) object;
-      locationTracker.limitedQueue = deserializedLocationTracker.limitedQueue;
-      locationTracker.hasSentLowBatteryAlert = deserializedLocationTracker.hasSentLowBatteryAlert;
-      locationTracker.lastMovingLocation = deserializedLocationTracker.lastMovingLocation;
-    }
-
-    object = deserializeObject("carguard-watching-service-bluetooth-connection-manager.ser");
-    if (object != null) {
-      BluetoothConnectionManager deserializedBluetoothConnectionManager = (BluetoothConnectionManager) object;
-      bluetoothConnectionManager.latestConnectionTime = deserializedBluetoothConnectionManager.latestConnectionTime;
-    }
+    locationTracker = new LocationTracker();
+    bluetoothConnectionManager = new BluetoothConnectionManager();
+    batteryLevelManager = new BatteryLevelManager();
+    loadStateFromFile();
 
     bluetoothConnectionManager.setContext(this);
     if (bluetoothConnectionManager.isConnectionTimedOut()) {
@@ -57,67 +41,12 @@ public class WatchingService extends IntentService {
     locationTracker.startListener();
   }
 
-  private Object deserializeObject(String fileName) {
-    ObjectInputStream objectinputstream = null;
-    FileInputStream streamIn = null;
-    Object deserializedObject = null;
-    try {
-      streamIn = openFileInput(fileName);
-      objectinputstream = new ObjectInputStream(streamIn);
-      deserializedObject = objectinputstream.readObject();
-    } catch (ClassNotFoundException e) {
-      e.printStackTrace();
-    } catch (OptionalDataException e) {
-      e.printStackTrace();
-    } catch (FileNotFoundException e) {
-      e.printStackTrace();
-    } catch (StreamCorruptedException e) {
-      e.printStackTrace();
-    } catch (IOException e) {
-      e.printStackTrace();
-    } finally {
-      if (objectinputstream != null) {
-        try {
-          objectinputstream.close();
-          streamIn.close();
-        } catch (IOException e) {
-          e.printStackTrace();
-        }
-      }
-    }
-
-    return deserializedObject;
-  }
-
   @Override
   public void onDestroy() {
-    serializeObject("carguard-watching-service-location-tracker.ser", locationTracker);
-    serializeObject("carguard-watching-service-bluetooth-connection-manager.ser", bluetoothConnectionManager);
-
     bluetoothConnectionManager.stopSearching();
+    saveStateToFile();
 
     super.onDestroy();
-  }
-
-  private void serializeObject(String fileName, Object object) {
-    ObjectOutputStream oos = null;
-    FileOutputStream fout = null;
-    try {
-      fout = openFileOutput(fileName, Context.MODE_PRIVATE);
-      oos = new ObjectOutputStream(fout);
-      oos.writeObject(object);
-    } catch (Exception ex) {
-      ex.printStackTrace();
-    } finally {
-      if (oos != null) {
-        try {
-          oos.close();
-          fout.close();
-        } catch (IOException e) {
-          e.printStackTrace();
-        }
-      }
-    }
   }
 
   @Override
@@ -147,5 +76,39 @@ public class WatchingService extends IntentService {
     }
 
     locationTracker.sendPreviousLocationsToServer();
+  }
+
+  private void loadStateFromFile() {
+    try {
+      Object object = Marshal.load(openFileInput("carguard-watching-service-location-tracker.ser"));
+      if (object != null) {
+        LocationTracker locationTrackerFromFile = (LocationTracker) object;
+        locationTracker.limitedQueue = locationTrackerFromFile.limitedQueue;
+        locationTracker.hasSentLowBatteryAlert = locationTrackerFromFile.hasSentLowBatteryAlert;
+        locationTracker.lastMovingLocation = locationTrackerFromFile.lastMovingLocation;
+      }
+    } catch (FileNotFoundException ignored) {
+    }
+
+    try {
+      Object object = Marshal.load(openFileInput("carguard-watching-service-bluetooth-connection-manager.ser"));
+      if (object != null) {
+        BluetoothConnectionManager bluetoothConnectionManagerFromFile = (BluetoothConnectionManager) object;
+        bluetoothConnectionManager.latestConnectionTime = bluetoothConnectionManagerFromFile.latestConnectionTime;
+      }
+    } catch (FileNotFoundException ignored) {
+    }
+  }
+
+  private void saveStateToFile() {
+    try {
+      Marshal.dump(openFileOutput("carguard-watching-service-location-tracker.ser", Context.MODE_PRIVATE), locationTracker);
+    } catch (FileNotFoundException ignored) {
+    }
+
+    try {
+      Marshal.dump(openFileOutput("carguard-watching-service-bluetooth-connection-manager.ser", Context.MODE_PRIVATE), bluetoothConnectionManager);
+    } catch (FileNotFoundException ignored) {
+    }
   }
 }
