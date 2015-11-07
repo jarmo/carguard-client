@@ -6,6 +6,7 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.provider.BaseColumns;
+
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -13,7 +14,10 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
-import static me.guard.car.Database.Item.*;
+import static me.guard.car.Database.Item.CREATED_AT;
+import static me.guard.car.Database.Item.DATA;
+import static me.guard.car.Database.Item.TABLE_NAME;
+import static me.guard.car.Database.Item._ID;
 
 public class Database extends SQLiteOpenHelper {
   public static final int DATABASE_VERSION = 3;
@@ -43,6 +47,7 @@ public class Database extends SQLiteOpenHelper {
       } catch (JSONException ignored) {
       }
     }
+    cursor.close();
 
     return locationsById;
   }

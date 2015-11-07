@@ -9,27 +9,32 @@ public class Preferences {
   public static final String PREFERENCES_NAME = "CarGuard";
   public static final String API_KEY_NAME = "apiKey";
   public static final String SECRET_NAME = "secret";
-
-  private Context context;
+  private final SharedPreferences sharedPreferences;
 
   public Preferences(Context context) {
-    this.context = context;
+    this.sharedPreferences = context.getSharedPreferences(PREFERENCES_NAME, MODE_PRIVATE);
   }
 
   public String get(String name, String defaultValue) {
-    SharedPreferences sharedPreferences = context.getSharedPreferences(PREFERENCES_NAME, MODE_PRIVATE);
-
-    if (sharedPreferences.contains(name)) {
+    if (has(name)) {
       return sharedPreferences.getString(name, null);
     } else {
-      SharedPreferences.Editor editablePreferences = sharedPreferences.edit();
-      editablePreferences.putString(name, defaultValue);
-      editablePreferences.commit();
+      set(name, defaultValue);
       return defaultValue;
     }
   }
 
+  public void set(String name, String value) {
+    SharedPreferences.Editor editablePreferences = sharedPreferences.edit();
+    editablePreferences.putString(name, value);
+    editablePreferences.commit();
+  }
+
+  public boolean has(String name) {
+    return sharedPreferences.contains(name);
+  }
+
   public String get(String name) {
-    return get(name, "");
+    return get(name, null);
   }
 }

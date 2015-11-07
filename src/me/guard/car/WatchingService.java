@@ -1,35 +1,26 @@
 package me.guard.car;
 
 import android.app.IntentService;
-import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothDevice;
-import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
-import android.location.Location;
-import android.location.LocationListener;
-import android.location.LocationManager;
-import android.os.Bundle;
-import android.util.Log;
 
-import java.util.Date;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.OptionalDataException;
+import java.io.StreamCorruptedException;
+import java.util.HashMap;
+import java.util.Map;
 
-import static android.bluetooth.BluetoothDevice.ACTION_ACL_CONNECTED;
-import static android.location.LocationManager.GPS_PROVIDER;
 import static android.support.v4.content.WakefulBroadcastReceiver.completeWakefulIntent;
 
 public class WatchingService extends IntentService {
-  public static final int LOCATION_UPDATES_INTERVAL_MILLIS = 60 * 1000;
-  public static final int LOCATION_UPDATES_MINIMUM_DISTANCE_METRES = 100;
-  public static final int BLUETOOTH_CONNECTION_TIMEOUT_MILLIS = 15 * 60 * 1000;
-  public static final int HEARTBEAT_TIMEOUT_MILLIS = 12 * 60 * 60 * 1000;
-
   static LocationTracker locationTracker = new LocationTracker();
-  public static Date latestBluetoothConnectionTime = timeoutTime(BLUETOOTH_CONNECTION_TIMEOUT_MILLIS);
-
-  private LocationManager locationManager;
-  private BroadcastReceiver bluetoothStatusHandler;
+  static BluetoothConnectionManager bluetoothConnectionManager = new BluetoothConnectionManager();
+  static BatteryLevelManager batteryLevelManager = new BatteryLevelManager();
 
   public WatchingService() {
     super(WatchingService.class.getSimpleName());
@@ -42,89 +33,119 @@ public class WatchingService extends IntentService {
   }
 
   protected void initialize() {
-    locationTracker.setContext(this);
-    initializeLocationListener();
-
-    if (shouldEstablishBluetoothConnection()) {
-      initializeBluetoothListener();
+    Object object = deserializeObject("carguard-watching-service-location-tracker.ser");
+    if (object != null) {
+      LocationTracker deserializedLocationTracker = (LocationTracker) object;
+      locationTracker.limitedQueue = deserializedLocationTracker.limitedQueue;
+      locationTracker.hasSentLowBatteryAlert = deserializedLocationTracker.hasSentLowBatteryAlert;
+      locationTracker.lastMovingLocation = deserializedLocationTracker.lastMovingLocation;
     }
+
+    object = deserializeObject("carguard-watching-service-bluetooth-connection-manager.ser");
+    if (object != null) {
+      BluetoothConnectionManager deserializedBluetoothConnectionManager = (BluetoothConnectionManager) object;
+      bluetoothConnectionManager.latestConnectionTime = deserializedBluetoothConnectionManager.latestConnectionTime;
+    }
+
+    bluetoothConnectionManager.setContext(this);
+    if (bluetoothConnectionManager.isConnectionTimedOut()) {
+      bluetoothConnectionManager.tryToEstablishConnection();
+    }
+
+    batteryLevelManager.setContext(this);
+    locationTracker.setContext(this);
+    locationTracker.startListener();
+  }
+
+  private Object deserializeObject(String fileName) {
+    ObjectInputStream objectinputstream = null;
+    FileInputStream streamIn = null;
+    Object deserializedObject = null;
+    try {
+      streamIn = openFileInput(fileName);
+      objectinputstream = new ObjectInputStream(streamIn);
+      deserializedObject = objectinputstream.readObject();
+    } catch (ClassNotFoundException e) {
+      e.printStackTrace();
+    } catch (OptionalDataException e) {
+      e.printStackTrace();
+    } catch (FileNotFoundException e) {
+      e.printStackTrace();
+    } catch (StreamCorruptedException e) {
+      e.printStackTrace();
+    } catch (IOException e) {
+      e.printStackTrace();
+    } finally {
+      if (objectinputstream != null) {
+        try {
+          objectinputstream.close();
+          streamIn.close();
+        } catch (IOException e) {
+          e.printStackTrace();
+        }
+      }
+    }
+
+    return deserializedObject;
   }
 
   @Override
   public void onDestroy() {
-    if (bluetoothStatusHandler != null) {
-      unregisterReceiver(bluetoothStatusHandler);
-    }
+    serializeObject("carguard-watching-service-location-tracker.ser", locationTracker);
+    serializeObject("carguard-watching-service-bluetooth-connection-manager.ser", bluetoothConnectionManager);
+
+    bluetoothConnectionManager.stopSearching();
+
     super.onDestroy();
+  }
+
+  private void serializeObject(String fileName, Object object) {
+    ObjectOutputStream oos = null;
+    FileOutputStream fout = null;
+    try {
+      fout = openFileOutput(fileName, Context.MODE_PRIVATE);
+      oos = new ObjectOutputStream(fout);
+      oos.writeObject(object);
+    } catch (Exception ex) {
+      ex.printStackTrace();
+    } finally {
+      if (oos != null) {
+        try {
+          oos.close();
+          fout.close();
+        } catch (IOException e) {
+          e.printStackTrace();
+        }
+      }
+    }
   }
 
   @Override
   protected void onHandleIntent(Intent intent) {
-    handleLocationEvent(locationManager.getLastKnownLocation(GPS_PROVIDER));
+    handleLocationEvent();
     completeWakefulIntent(intent);
   }
 
-  protected void handleLocationEvent(Location location) {
-    Log.d(WatchingService.class.getSimpleName(), "Handling location event");
-    //boolean shouldSendHeartBeatLocation = lastSentTime.getTime() <= timeoutTime(HEARTBEAT_TIMEOUT_MILLIS).getTime();
-    //boolean isProbablyMoving = lastSentLocation != null && lastSentLocation.distanceTo(location) >= 100 || location.getSpeed() >= 10;
-    locationTracker.sendLocationToServerWhenMoving(location);
-    locationTracker.sendPreviousLocationsToServer();
-
-//      if (shouldSendHeartBeatLocation || isProbablyMoving && isBluetoothConnectionTimedOut()) {
-//        try {
-//          sendLocationToServer(location);
-//          Log.d(WatchingService.class.getSimpleName(), "Location sent to the server");
-//        } catch (Exception e) {
-//          Log.d(WatchingService.class.getSimpleName(), "Failed to send location to the server", e);
-//          storeLocationLocally(location);
-//        } finally {
-//          lastSentTime = new Date();
-//          lastSentLocation = location;
-//        }
-//      }
-  }
-
-  protected boolean shouldEstablishBluetoothConnection() {
-    return latestBluetoothConnectionTime.getTime() <= timeoutTime(BLUETOOTH_CONNECTION_TIMEOUT_MILLIS - LOCATION_UPDATES_INTERVAL_MILLIS).getTime();
-  }
-
-  protected boolean isBluetoothConnectionTimedOut() {
-    return latestBluetoothConnectionTime.getTime() <= timeoutTime(BLUETOOTH_CONNECTION_TIMEOUT_MILLIS).getTime();
-  }
-
-  protected void initializeBluetoothListener() {
-    bluetoothStatusHandler = new BroadcastReceiver() {
-      @Override
-      public void onReceive(Context context, Intent intent) {
-        if (ACTION_ACL_CONNECTED.equals(intent.getAction())) {
-          Log.v(WatchingService.class.getSimpleName(), "Bluetooth connected");
-          latestBluetoothConnectionTime = new Date();
-        }
-      }
-    };
-
-    registerReceiver(bluetoothStatusHandler, new IntentFilter(ACTION_ACL_CONNECTED));
-
-    //noinspection ConstantConditions
-    for (BluetoothDevice bluetoothDevice : BluetoothAdapter.getDefaultAdapter().getBondedDevices()) {
-      bluetoothDevice.fetchUuidsWithSdp();
+  protected void handleLocationEvent() {
+    boolean isLowBattery = batteryLevelManager.isLowBattery();
+    boolean hasSentLowBatteryAlert = locationTracker.hasSentLowBatteryAlert;
+    boolean shouldSendHeartbeatLocation = locationTracker.shouldSendHeartbeatLocation();
+    boolean isBluetoothConnectionTimedOut = bluetoothConnectionManager.isConnectionTimedOut();
+    boolean isMoving = locationTracker.isMoving();
+    if (isLowBattery && !hasSentLowBatteryAlert || !isLowBattery && hasSentLowBatteryAlert || shouldSendHeartbeatLocation || isBluetoothConnectionTimedOut && isMoving) {
+      Map<String, Object> debugInformation = new HashMap<String, Object>();
+      debugInformation.put("isLowBattery", isLowBattery);
+      debugInformation.put("!hasSentLowBatteryAlert", !hasSentLowBatteryAlert);
+      debugInformation.put("isLowBattery && !hasSentLowBatteryAlert", isLowBattery && !hasSentLowBatteryAlert);
+      debugInformation.put("!isLowBattery && hasSentLowBatteryAlert", !isLowBattery && hasSentLowBatteryAlert);
+      debugInformation.put("shouldSendHeartbeatLocation", shouldSendHeartbeatLocation);
+      debugInformation.put("isBluetoothConnectionTimedOut", isBluetoothConnectionTimedOut);
+      debugInformation.put("isMoving", isMoving);
+      debugInformation.put("isBluetoothConnectionTimedOut && isMoving", isBluetoothConnectionTimedOut && isMoving);
+      debugInformation.put("locationTracker.lastMovingLocation != null", locationTracker.lastMovingLocation != null);
+      locationTracker.sendLastLocationToServer(debugInformation);
     }
-  }
 
-  protected void initializeLocationListener() {
-    locationManager = ((LocationManager) getSystemService(LOCATION_SERVICE));
-    locationManager.requestLocationUpdates(
-      GPS_PROVIDER, LOCATION_UPDATES_INTERVAL_MILLIS, LOCATION_UPDATES_MINIMUM_DISTANCE_METRES,
-      new LocationListener() {
-        @Override public void onLocationChanged(Location location) {}
-        @Override public void onStatusChanged(String s, int i, Bundle bundle) {}
-        @Override public void onProviderEnabled(String s) {}
-        @Override public void onProviderDisabled(String s) {}
-      });
-  }
-
-  protected static Date timeoutTime(int timeoutMillis) {
-    return new Date(new Date().getTime() - timeoutMillis);
+    locationTracker.sendPreviousLocationsToServer();
   }
 }

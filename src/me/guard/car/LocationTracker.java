@@ -1,73 +1,81 @@
 package me.guard.car;
 
 import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
 import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
+import android.os.Bundle;
 import android.util.Log;
+
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.util.Date;
-import java.util.HashMap;
+import java.io.Serializable;
+import java.util.Calendar;
 import java.util.Map;
 
-import static android.content.Intent.ACTION_BATTERY_CHANGED;
-import static android.os.BatteryManager.EXTRA_LEVEL;
-import static android.os.BatteryManager.EXTRA_SCALE;
+import static android.content.Context.LOCATION_SERVICE;
+import static android.location.LocationManager.GPS_PROVIDER;
+import static java.util.Calendar.HOUR_OF_DAY;
 import static me.guard.car.Preferences.API_KEY_NAME;
 import static me.guard.car.Preferences.SECRET_NAME;
 
-public class LocationTracker {
-  private static final int STORED_LOCATIONS_COUNT = 3;
-  private Context context;
+public class LocationTracker implements Serializable {
+  private static final long serialVersionUID = 0L;
 
-  final LimitedQueue<Location> limitedQueue = new LimitedQueue<Location>(STORED_LOCATIONS_COUNT);
+  private static final int STORED_LOCATIONS_COUNT = 3;
+  private static final int LOCATION_UPDATES_INTERVAL_IN_MILLIS = 60 * 1000;
+  public static final int LOCATION_UPDATES_MINIMUM_DISTANCE_IN_METRES = 100;
+
+  private transient Context context;
+  private transient LocationManager locationManager;
+
+  LimitedQueue<SerializableLocation> limitedQueue = new LimitedQueue<SerializableLocation>(STORED_LOCATIONS_COUNT);
   LastMovingLocation lastMovingLocation;
+  transient BatteryLevelManager batteryLevelManager = new BatteryLevelManager();
+  public boolean hasSentLowBatteryAlert;
 
   public void setContext(Context context) {
     this.context = context;
+    batteryLevelManager.setContext(context);
   }
 
-  public void sendLocationToServerWhenMoving(Location location) {
-    if (location == null) return;
-
-    limitedQueue.add(location);
-    if (isMoving()) sendLastLocationToServer();
-  }
-
-  public void sendPreviousLocationsToServer() {
-    Database database = getDatabase();
-    for (Map.Entry<String, JSONObject> locationWithId : database.getStoredLocationsData().entrySet()) {
-      try {
-        sendLocationDataToServer(locationWithId.getValue());
-        database.delete(locationWithId.getKey());
-      } catch (Exception e) {
-        Log.e(WatchingService.class.getSimpleName(), "Failed to send previous location", e);
-      }
-    }
-  }
-
-  boolean isMoving() {
-    if (limitedQueue.size() == STORED_LOCATIONS_COUNT) {
-      if (lastMovingLocation == null) {
-        return true;
-      } else {
-        for (Location location : limitedQueue) {
-          if (lastMovingLocation.location.distanceTo(location) < 100) return false;
+  public void startListener() {
+    locationManager = ((LocationManager) context.getSystemService(LOCATION_SERVICE));
+    locationManager.requestLocationUpdates(
+      GPS_PROVIDER, LOCATION_UPDATES_INTERVAL_IN_MILLIS, LOCATION_UPDATES_MINIMUM_DISTANCE_IN_METRES,
+      new LocationListener() {
+        @Override
+        public void onLocationChanged(Location location) {
         }
 
-        return true;
-      }
-    }
+        @Override
+        public void onStatusChanged(String s, int i, Bundle bundle) {
+        }
 
-    return false;
+        @Override
+        public void onProviderEnabled(String s) {
+        }
+
+        @Override
+        public void onProviderDisabled(String s) {
+        }
+      });
   }
 
-  void sendLastLocationToServer() {
-    Location lastLocation = limitedQueue.getLast();
+  public boolean shouldSendHeartbeatLocation() {
+    Calendar calendar = Calendar.getInstance();
+    calendar.add(HOUR_OF_DAY, -6);
+
+    return lastMovingLocation == null || lastMovingLocation.date.before(calendar.getTime());
+  }
+
+  void sendLastLocationToServer(Map<String, Object> debugInformation) {
+    SerializableLocation lastLocation = getLastKnownLocation();
+    if (lastLocation == null) return;
+
     try {
-      sendLocationToServer(lastLocation);
+      sendLocationToServer(lastLocation, debugInformation);
       Log.d(getClass().getSimpleName(), "Location sent to the server");
     } catch (Exception e) {
       Log.d(getClass().getSimpleName(), "Failed to send location to the server", e);
@@ -77,55 +85,81 @@ public class LocationTracker {
     lastMovingLocation = new LastMovingLocation(lastLocation);
   }
 
-  void sendLocationToServer(Location location) {
-    sendLocationDataToServer(new JSONObject(getData(location)));
+  public void sendPreviousLocationsToServer() {
+    Database database = getDatabase();
+    for (Map.Entry<String, JSONObject> locationWithId : database.getStoredLocationsData().entrySet()) {
+      try {
+        sendLocationDataToServer(locationWithId.getValue());
+        database.delete(locationWithId.getKey());
+      } catch (Exception e) {
+        Log.e(getClass().getSimpleName(), "Failed to send previous location", e);
+      }
+    }
+  }
+
+  private SerializableLocation getLastKnownLocation() {
+    Location location = locationManager.getLastKnownLocation(GPS_PROVIDER);
+    return location != null ? new SerializableLocation(location) : null;
+  }
+
+  boolean isMoving() {
+    SerializableLocation lastKnownLocation = getLastKnownLocation();
+    if (lastKnownLocation == null) return false;
+
+    limitedQueue.add(lastKnownLocation);
+
+    if (lastMovingLocation == null) return true;
+    if (limitedQueue.size() != STORED_LOCATIONS_COUNT) return false;
+
+    for (SerializableLocation storedLocation : limitedQueue) {
+      if (lastMovingLocation.location.getLocation().distanceTo(storedLocation.getLocation()) < LOCATION_UPDATES_MINIMUM_DISTANCE_IN_METRES)
+        return false;
+    }
+
+    float speedInKmPerHour = lastKnownLocation.getLocation().getSpeed() / 1000 * 3600;
+    return speedInKmPerHour >= 20;
+  }
+
+  void sendLocationToServer(SerializableLocation location, Map<String, Object> debugInformation) {
+    Map<String, Object> data = getData(location);
+    data.put("debug", debugInformation);
+    sendLocationDataToServer(new JSONObject(data));
+  }
+
+  void storeLocationLocally(SerializableLocation location) {
+    getDatabase().save(new JSONObject(getData(location)));
+  }
+
+  private Map<String, Object> getData(SerializableLocation location) {
+    Map<String, Object> data = location.getData();
+    data.put("battery", batteryLevelManager.getBatteryLevel());
+
+    if (lastMovingLocation != null) {
+      data.put("distance", location.getLocation().distanceTo(lastMovingLocation.location.getLocation()));
+    }
+
+    return data;
   }
 
   private void sendLocationDataToServer(JSONObject data) {
     Preferences preferences = new Preferences(context);
     try {
-      new HttpClient(preferences.get(API_KEY_NAME)).post(new EncryptedJSONObject(data, preferences.get(SECRET_NAME)).toString());
+      JSONObject json = new EncryptedJSONObject(data, preferences.get(SECRET_NAME));
+      if (batteryLevelManager.isLowBattery()) {
+        json = new JSONObject(json.toString());
+        json.put("lowBattery", true);
+        hasSentLowBatteryAlert = true;
+      } else {
+        hasSentLowBatteryAlert = false;
+      }
+      new HttpClient("/map/" + preferences.get(API_KEY_NAME)).post(json.toString());
     } catch (JSONException e) {
       throw new RuntimeException(e);
     }
-  }
-
-  void storeLocationLocally(Location location) {
-    getDatabase().save(new JSONObject(getData(location)));
-  }
-
-  private Map<String, Object> getData(final Location location) {
-    Intent batteryStatus = context.registerReceiver(null, new IntentFilter(ACTION_BATTERY_CHANGED));
-    int level = batteryStatus.getIntExtra(EXTRA_LEVEL, -1);
-    int scale = batteryStatus.getIntExtra(EXTRA_SCALE, -1);
-    final float batteryPercentage = level / (float)scale;
-
-    Map<String, Object> data = new HashMap<String, Object>() {{
-      put("latitude", location.getLatitude());
-      put("longitude", location.getLongitude());
-      put("speed", location.getSpeed());
-      put("battery", batteryPercentage);
-      put("fixTime", location.getTime());
-    }};
-
-    if (lastMovingLocation != null) {
-      data.put("distance", location.distanceTo(lastMovingLocation.location));
-    }
-
-    return data;
   }
 
   private Database getDatabase() {
     return new Database(context);
   }
 
-  public static class LastMovingLocation {
-    public final Date date;
-    public final Location location;
-
-    public LastMovingLocation(Location location) {
-      this.location = location;
-      this.date = new Date();
-    }
-  }
 }
