@@ -38,10 +38,10 @@ public class LocationTracker implements Serializable {
   public void setContext(Context context) {
     this.context = context;
     batteryLevelManager.setContext(context);
+    locationManager = ((LocationManager) context.getSystemService(LOCATION_SERVICE));
   }
 
   public void startListener() {
-    locationManager = ((LocationManager) context.getSystemService(LOCATION_SERVICE));
     locationManager.requestLocationUpdates(
       GPS_PROVIDER, LOCATION_UPDATES_INTERVAL_IN_MILLIS, LOCATION_UPDATES_MINIMUM_DISTANCE_IN_METRES,
       new LocationListener() {

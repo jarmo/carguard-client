@@ -23,7 +23,6 @@ public class BluetoothConnectionManager implements Serializable {
   static final int CONNECTION_TIMEOUT_IN_MINUTES = 15;
   Date latestConnectionTime = new Date();
   private transient Context context;
-  private transient BroadcastReceiver bluetoothStatusHandler;
 
   public void setContext(Context context) {
     this.context = context;
@@ -37,7 +36,7 @@ public class BluetoothConnectionManager implements Serializable {
   }
 
   public void tryToEstablishConnection() {
-    bluetoothStatusHandler = new BroadcastReceiver() {
+    BroadcastReceiver bluetoothStatusHandler = new BroadcastReceiver() {
       @Override
       public void onReceive(Context context, Intent intent) {
         if (ACTION_ACL_CONNECTED.equals(intent.getAction())) {
@@ -57,6 +56,7 @@ public class BluetoothConnectionManager implements Serializable {
     }
 
     waitForConnection();
+    context.unregisterReceiver(bluetoothStatusHandler);
   }
 
   private void waitForConnection() {
@@ -68,13 +68,6 @@ public class BluetoothConnectionManager implements Serializable {
       } catch (InterruptedException e) {
         throw new RuntimeException(e);
       }
-    }
-  }
-
-  public void stopSearching() {
-    if (bluetoothStatusHandler != null) {
-      context.unregisterReceiver(bluetoothStatusHandler);
-      bluetoothStatusHandler = null;
     }
   }
 }

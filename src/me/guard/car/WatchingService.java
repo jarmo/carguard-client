@@ -32,18 +32,12 @@ public class WatchingService extends IntentService {
     loadStateFromFile();
 
     bluetoothConnectionManager.setContext(this);
-    if (bluetoothConnectionManager.isConnectionTimedOut()) {
-      bluetoothConnectionManager.tryToEstablishConnection();
-    }
-
     batteryLevelManager.setContext(this);
     locationTracker.setContext(this);
-    locationTracker.startListener();
   }
 
   @Override
   public void onDestroy() {
-    bluetoothConnectionManager.stopSearching();
     saveStateToFile();
 
     super.onDestroy();
@@ -51,6 +45,11 @@ public class WatchingService extends IntentService {
 
   @Override
   protected void onHandleIntent(Intent intent) {
+    if (bluetoothConnectionManager.isConnectionTimedOut()) {
+      bluetoothConnectionManager.tryToEstablishConnection();
+    }
+
+    locationTracker.startListener();
     handleLocationEvent();
     completeWakefulIntent(intent);
   }
