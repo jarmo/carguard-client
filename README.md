@@ -1,4 +1,4 @@
-Car Guard Client
+Car Guard
 ===============
 
 CarGuard is an Android app for guarding your car by using GPS positioning.
@@ -18,7 +18,7 @@ Features
 Requirements
 ---------------
 
-* A car;
+* A car
 * An Android phone with Android version >= 4.0.3 (SDK API level 15)
 * A SIM card for the phone with a cellular data access
 * Car charger for the phone
@@ -31,11 +31,13 @@ Installation
 * Install [Android SDK](http://developer.android.com/sdk)
 * Clone this project `git clone https://github.com/jarmo/carguard-client.git`
 * Build apk `ant debug`
-* Plug an Android phone into your PC
-* Install apk on the phone `adb -d install bin\car_guard-debug.apk`
+* Plug that Android phone into your PC
+* Install apk on the phone `adb -d install bin/car_guard-debug.apk`
+* Enable GPS in the phone
+* Enable Bluetooth in the phone
+* Pair the phone over Bluetooth with your main phone - this is needed for detecting if you are driving
 * Start application in the phone
 * Store `API key` and `Secret` for later use - without them you cannot view your car location!
-* Pair that Android phone over Bluetooth with your main phone - this is needed for detecting if you are driving
 * Install phone into your car by providing continuous power
 * Head to http://carguard.me to see your car location
 
@@ -44,6 +46,6 @@ Tips & Tricks
 ---------------
 
 * Set your phone as silent
-* Turn of WiFi
+* Turn off WiFi
 * Remove all unneeded software to reduce network traffic - maybe even install modified Android like CyanogenMod.
 * Make sure that network data is allowed when roaming - you wan't to track your car if it's taken abroad as well ;)
