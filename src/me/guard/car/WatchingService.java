@@ -38,6 +38,8 @@ public class WatchingService extends IntentService {
 
   @Override
   public void onDestroy() {
+    bluetoothConnectionManager.stopListener();
+    locationTracker.stopListener();
     saveStateToFile();
 
     super.onDestroy();

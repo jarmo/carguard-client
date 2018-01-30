@@ -23,6 +23,7 @@ public class BluetoothConnectionManager implements Serializable {
   static final int CONNECTION_TIMEOUT_IN_MINUTES = 15;
   Date latestConnectionTime = new Date();
   private transient Context context;
+  private BroadcastReceiver connectionStatusListener;
 
   public void setContext(Context context) {
     this.context = context;
@@ -36,7 +37,10 @@ public class BluetoothConnectionManager implements Serializable {
   }
 
   public void tryToEstablishConnection() {
-    BroadcastReceiver bluetoothStatusHandler = new BroadcastReceiver() {
+    HandlerThread handlerThread = new HandlerThread("ht");
+    handlerThread.start();
+
+    connectionStatusListener = new BroadcastReceiver() {
       @Override
       public void onReceive(Context context, Intent intent) {
         if (ACTION_ACL_CONNECTED.equals(intent.getAction())) {
@@ -45,10 +49,7 @@ public class BluetoothConnectionManager implements Serializable {
         }
       }
     };
-
-    HandlerThread handlerThread = new HandlerThread("ht");
-    handlerThread.start();
-    context.registerReceiver(bluetoothStatusHandler, new IntentFilter(ACTION_ACL_CONNECTED), null, new Handler(handlerThread.getLooper()));
+    context.registerReceiver(connectionStatusListener, new IntentFilter(ACTION_ACL_CONNECTED), null, new Handler(handlerThread.getLooper()));
 
     //noinspection ConstantConditions
     for (BluetoothDevice bluetoothDevice : BluetoothAdapter.getDefaultAdapter().getBondedDevices()) {
@@ -56,7 +57,13 @@ public class BluetoothConnectionManager implements Serializable {
     }
 
     waitForConnection();
-    context.unregisterReceiver(bluetoothStatusHandler);
+  }
+
+  public void stopListener() {
+    if (context != null && connectionStatusListener != null) {
+      context.unregisterReceiver(connectionStatusListener);
+      connectionStatusListener = null;
+    }
   }
 
   private void waitForConnection() {

@@ -1,0 +1,25 @@
+C:\Users\Jarmo\Documents\Projects\Java\Android\CarGuard\bin\classes.dex : \
+C:\Users\Jarmo\Documents\Projects\Java\Android\CarGuard\bin\classes\me\guard\car\BootHandler.class \
+C:\Users\Jarmo\Documents\Projects\Java\Android\CarGuard\bin\classes\me\guard\car\BuildConfig.class \
+C:\Users\Jarmo\Documents\Projects\Java\Android\CarGuard\bin\classes\me\guard\car\Database$Item.class \
+C:\Users\Jarmo\Documents\Projects\Java\Android\CarGuard\bin\classes\me\guard\car\Database.class \
+C:\Users\Jarmo\Documents\Projects\Java\Android\CarGuard\bin\classes\me\guard\car\EncryptedJSONObject$1.class \
+C:\Users\Jarmo\Documents\Projects\Java\Android\CarGuard\bin\classes\me\guard\car\EncryptedJSONObject.class \
+C:\Users\Jarmo\Documents\Projects\Java\Android\CarGuard\bin\classes\me\guard\car\HttpClient.class \
+C:\Users\Jarmo\Documents\Projects\Java\Android\CarGuard\bin\classes\me\guard\car\MainActivity.class \
+C:\Users\Jarmo\Documents\Projects\Java\Android\CarGuard\bin\classes\me\guard\car\Manifest.class \
+C:\Users\Jarmo\Documents\Projects\Java\Android\CarGuard\bin\classes\me\guard\car\Preferences.class \
+C:\Users\Jarmo\Documents\Projects\Java\Android\CarGuard\bin\classes\me\guard\car\R$attr.class \
+C:\Users\Jarmo\Documents\Projects\Java\Android\CarGuard\bin\classes\me\guard\car\R$drawable.class \
+C:\Users\Jarmo\Documents\Projects\Java\Android\CarGuard\bin\classes\me\guard\car\R$id.class \
+C:\Users\Jarmo\Documents\Projects\Java\Android\CarGuard\bin\classes\me\guard\car\R$layout.class \
+C:\Users\Jarmo\Documents\Projects\Java\Android\CarGuard\bin\classes\me\guard\car\R$string.class \
+C:\Users\Jarmo\Documents\Projects\Java\Android\CarGuard\bin\classes\me\guard\car\R.class \
+C:\Users\Jarmo\Documents\Projects\Java\Android\CarGuard\bin\classes\me\guard\car\TaskRunner.class \
+C:\Users\Jarmo\Documents\Projects\Java\Android\CarGuard\bin\classes\me\guard\car\WatchingService$1.class \
+C:\Users\Jarmo\Documents\Projects\Java\Android\CarGuard\bin\classes\me\guard\car\WatchingService$2.class \
+C:\Users\Jarmo\Documents\Projects\Java\Android\CarGuard\bin\classes\me\guard\car\WatchingService$3.class \
+C:\Users\Jarmo\Documents\Projects\Java\Android\CarGuard\bin\classes\me\guard\car\WatchingService.class \
+C:\Users\Jarmo\Documents\Projects\Java\Android\CarGuard\bin\dexedLibs\commons-codec-1.3-4040fc8cbbc0216251e8d4c9c6b65d16.jar \
+C:\Users\Jarmo\Documents\Projects\Java\Android\CarGuard\bin\dexedLibs\google-play-services-8ea8a4b1e5fd61dac3ee55f8ffe83544.jar \
+C:\Users\Jarmo\Documents\Projects\Java\Android\CarGuard\bin\dexedLibs\android-support-v4-3f5f6d36640ed487b6f9cb4e94df659f.jar \

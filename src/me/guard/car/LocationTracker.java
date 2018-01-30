@@ -43,7 +43,9 @@ public class LocationTracker implements Serializable {
 
   public void startListener() {
     locationManager.requestLocationUpdates(
-      GPS_PROVIDER, LOCATION_UPDATES_INTERVAL_IN_MILLIS, LOCATION_UPDATES_MINIMUM_DISTANCE_IN_METRES,
+      GPS_PROVIDER,
+      LOCATION_UPDATES_INTERVAL_IN_MILLIS,
+      LOCATION_UPDATES_MINIMUM_DISTANCE_IN_METRES,
       new LocationListener() {
         @Override
         public void onLocationChanged(Location location) {
@@ -60,7 +62,15 @@ public class LocationTracker implements Serializable {
         @Override
         public void onProviderDisabled(String s) {
         }
-      });
+      }
+    );
+  }
+
+  public void stopListener() {
+//    if (locationManager != null && locationListener != null) {
+//      locationManager.removeUpdates(locationListener);
+//      locationListener = null;
+//    }
   }
 
   public boolean shouldSendHeartbeatLocation() {
@@ -87,13 +97,17 @@ public class LocationTracker implements Serializable {
 
   public void sendPreviousLocationsToServer() {
     Database database = getDatabase();
-    for (Map.Entry<String, JSONObject> locationWithId : database.getStoredLocationsData().entrySet()) {
-      try {
-        sendLocationDataToServer(locationWithId.getValue());
-        database.delete(locationWithId.getKey());
-      } catch (Exception e) {
-        Log.e(getClass().getSimpleName(), "Failed to send previous location", e);
+    try {
+      for (Map.Entry<String, JSONObject> locationWithId : database.getStoredLocationsData().entrySet()) {
+        try {
+          sendLocationDataToServer(locationWithId.getValue());
+          database.delete(locationWithId.getKey());
+        } catch (Exception e) {
+          Log.e(getClass().getSimpleName(), "Failed to send previous location", e);
+        }
       }
+    } finally {
+      database.close();
     }
   }
 
@@ -111,10 +125,10 @@ public class LocationTracker implements Serializable {
     if (lastMovingLocation == null) return true;
     if (recentLocations.size() != STORED_LOCATIONS_COUNT) return false;
 
-    for (SerializableLocation recentLocation : recentLocations) {
-      if (lastMovingLocation.location.getLocation().distanceTo(recentLocation.getLocation()) < LOCATION_UPDATES_MINIMUM_DISTANCE_IN_METRES)
-        return false;
-    }
+    //for (SerializableLocation recentLocation : recentLocations) {
+      //if (lastMovingLocation.location.getLocation().distanceTo(recentLocation.getLocation()) < LOCATION_UPDATES_MINIMUM_DISTANCE_IN_METRES)
+        //return false;
+    //}
 
     float speedInKmPerHour = lastKnownLocation.getLocation().getSpeed() / 1000 * 3600;
     return speedInKmPerHour >= 20;
@@ -127,7 +141,12 @@ public class LocationTracker implements Serializable {
   }
 
   void storeLocationLocally(SerializableLocation location) {
-    getDatabase().save(new JSONObject(getData(location)));
+    Database database = getDatabase();
+    try {
+      database.save(new JSONObject(getData(location)));
+    } finally {
+      database.close();
+    }
   }
 
   private Map<String, Object> getData(SerializableLocation location) {
